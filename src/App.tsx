@@ -137,13 +137,6 @@ export function App() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 40,
-    padding: 20,
-    backgroundColor: COLORS.LICORICE,
-    alignItems: 'center',
-  },
   scrollView: { width: '100%', marginBottom: 100 },
   bottomSection: {
     width: '100%',
