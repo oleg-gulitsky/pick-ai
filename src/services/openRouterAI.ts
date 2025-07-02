@@ -3,6 +3,7 @@ import { safeParse } from '../tools/safeParse';
 
 const MODELS = {
   Google_Gemma_3n_4B: 'google/gemma-3n-e4b-it:free',
+  Cypher_Alpha: 'openrouter/cypher-alpha:free',
   Meta_Llam_4_Maverick: 'meta-llama/llama-4-maverick:free',
   Deepseek_R1_0528_Qwen3_8B: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
   Mistral_Devstral_Small: 'mistralai/devstral-small-2505:free',
@@ -21,7 +22,7 @@ async function callOpenRouterAPI(content: string) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: MODELS.Google_Gemma_3n_4B,
+          model: MODELS.Cypher_Alpha,
           messages: [
             {
               role: 'user',

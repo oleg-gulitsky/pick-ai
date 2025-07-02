@@ -26,7 +26,9 @@ export function BasicButton({
       disabled={disabled}
       onPress={onPress}
     >
-      <Text style={styles.buttonTittle}>{title}</Text>
+      <Text style={styles.buttonTittle} numberOfLines={2}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
@@ -39,9 +41,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
+    paddingHorizontal: 5,
   },
   buttonTittle: {
     color: COLORS.DUTCH_WHITE,
     fontSize: 20,
+    textAlign: 'center',
   },
 });
