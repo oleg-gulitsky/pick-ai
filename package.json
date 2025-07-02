@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "version": "node scripts/updateNativeVersions.js"
+    "version": "node scripts/updateNativeVersions.js",
+    "postversion": "git add android/app/build.gradle ios/PickAI/Info.plist && git commit --amend --no-edit"
   },
   "dependencies": {
     "react": "19.1.0",
