@@ -12,9 +12,10 @@
     "postversion": "git add android/app/build.gradle ios/PickAI/Info.plist && git commit --amend --no-edit"
   },
   "dependencies": {
+    "@react-native/new-app-screen": "0.80.0",
     "react": "19.1.0",
     "react-native": "0.80.0",
-    "@react-native/new-app-screen": "0.80.0"
+    "react-native-appodeal": "^3.5.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

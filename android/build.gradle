@@ -17,5 +17,10 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
     }
 }
-
+allprojects {
+    repositories {
+        jcenter()
+        maven { url "https://artifactory.appodeal.com/appodeal" }
+    }
+}
 apply plugin: "com.facebook.react.rootproject"

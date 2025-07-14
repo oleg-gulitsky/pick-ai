@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput } from 'react-native';
 import { Question } from './appTypes/Question';
 import {
@@ -10,6 +10,7 @@ import { COLORS } from './constants/colors';
 import { Container } from './components/basic/Container';
 import { BasicButton } from './components/basic/BasicButton';
 import { STRINGS } from './constants/strings';
+import { initAds, tryShowInterstitial } from './modules/ads';
 
 export function App() {
   const [firstOption, setFirstOption] = useState('');
@@ -21,7 +22,12 @@ export function App() {
 
   const answers = useRef<number[]>([]);
 
+  useEffect(() => {
+    initAds();
+  }, []);
+
   const handleGetQuestionsPress = () => {
+    tryShowInterstitial();
     setPending(true);
     getQuestionsFromOpenRouter(firstOption, secondOption)
       .then(res => {
@@ -34,6 +40,7 @@ export function App() {
     answers.current[index] = value;
 
     if (index + 1 >= questions.length) {
+      tryShowInterstitial();
       setPending(true);
       setQuestions([]);
       setQuestionIndex(0);
@@ -51,6 +58,7 @@ export function App() {
   };
 
   const handleNextPress = () => {
+    tryShowInterstitial();
     setFirstOption('');
     setSecondOption('');
     setResult('');
@@ -141,7 +149,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     width: '100%',
     position: 'absolute',
-    bottom: 40,
+    bottom: 70,
   },
   activityIndicator: {
     marginTop: '70%',
