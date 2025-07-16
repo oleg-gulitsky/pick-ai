@@ -7,7 +7,7 @@ import {
   AppodealSdkEvent,
 } from 'react-native-appodeal';
 
-const isShowEventDevLogs = true;
+const isShowEventDevLogs = false;
 
 const appodealAppKey = '56020f47ab9ab1331588b2daaab8144c77511c39c95bbf69';
 

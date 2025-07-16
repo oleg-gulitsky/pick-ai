@@ -2,6 +2,7 @@ import { isQuestionArray, Question } from '../appTypes/Question';
 import { safeParse } from '../tools/safeParse';
 
 const MODELS = {
+  MoonshotAI_Kimi_K2: 'moonshotai/kimi-k2:free',
   Google_Gemma_3n_4B: 'google/gemma-3n-e4b-it:free',
   Cypher_Alpha: 'openrouter/cypher-alpha:free',
   Meta_Llam_4_Maverick: 'meta-llama/llama-4-maverick:free',
@@ -22,7 +23,7 @@ async function callOpenRouterAPI(content: string) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: MODELS.Cypher_Alpha,
+          model: MODELS.MoonshotAI_Kimi_K2,
           messages: [
             {
               role: 'user',
