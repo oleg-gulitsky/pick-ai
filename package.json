@@ -12,6 +12,9 @@
     "postversion": "git add android/app/build.gradle ios/PickAI/Info.plist && git commit --amend --no-edit"
   },
   "dependencies": {
+    "@react-native-firebase/analytics": "^22.4.0",
+    "@react-native-firebase/app": "^22.4.0",
+    "@react-native-firebase/remote-config": "^22.4.0",
     "@react-native/new-app-screen": "0.80.0",
     "react": "19.1.0",
     "react-native": "0.80.0",

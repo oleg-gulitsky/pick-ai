@@ -11,6 +11,7 @@ import { Container } from './components/basic/Container';
 import { BasicButton } from './components/basic/BasicButton';
 import { STRINGS } from './constants/strings';
 import { initAds, tryShowInterstitial } from './modules/ads';
+import { initRemoteConfig } from './modules/remoteConfig';
 
 export function App() {
   const [firstOption, setFirstOption] = useState('');
@@ -24,6 +25,7 @@ export function App() {
 
   useEffect(() => {
     initAds();
+    initRemoteConfig();
   }, []);
 
   const handleGetQuestionsPress = () => {

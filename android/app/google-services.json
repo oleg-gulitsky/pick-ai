@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "689603412325",
+    "project_id": "pick-ai-c86fe",
+    "storage_bucket": "pick-ai-c86fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:689603412325:android:dfedac5d86906a93a3618c",
+        "android_client_info": {
+          "package_name": "com.pickai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB18zz4i_XKUEvTk0A3XF_jWWbfdMJ9Yo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

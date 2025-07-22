@@ -5,7 +5,8 @@ export function safeParse<T>(
   try {
     const data = JSON.parse(str);
     return validator(data) ? data : null;
-  } catch {
+  } catch (error) {
+    console.error(error);
     return null;
   }
 }

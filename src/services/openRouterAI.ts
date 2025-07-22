@@ -1,15 +1,21 @@
 import { isQuestionArray, Question } from '../appTypes/Question';
 import { safeParse } from '../tools/safeParse';
 
-const MODELS = {
+export const MODELS = {
   MoonshotAI_Kimi_K2: 'moonshotai/kimi-k2:free',
   Google_Gemma_3n_4B: 'google/gemma-3n-e4b-it:free',
-  Cypher_Alpha: 'openrouter/cypher-alpha:free',
   Meta_Llam_4_Maverick: 'meta-llama/llama-4-maverick:free',
   Deepseek_R1_0528_Qwen3_8B: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+  TNG_DeepSeek_R1T2_Chimera: 'tngtech/deepseek-r1t2-chimera:free',
   Mistral_Devstral_Small: 'mistralai/devstral-small-2505:free',
   Meta_Llama_3_3_8B_Instruct: 'meta-llama/llama-3.3-8b-instruct:free',
 };
+
+let currentModel = MODELS.Deepseek_R1_0528_Qwen3_8B;
+
+export function setCurrentModel(newModel: string) {
+  currentModel = newModel;
+}
 
 async function callOpenRouterAPI(content: string) {
   try {
@@ -23,7 +29,7 @@ async function callOpenRouterAPI(content: string) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: MODELS.MoonshotAI_Kimi_K2,
+          model: currentModel,
           messages: [
             {
               role: 'user',
@@ -44,7 +50,6 @@ async function callOpenRouterAPI(content: string) {
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       throw new Error('Unexpected API response format');
     }
-
     return data.choices[0].message.content;
   } catch (error) {
     console.error('Error calling OpenRouter API:', error);
@@ -59,15 +64,19 @@ export async function getQuestionsFromOpenRouter(
   const content = await callOpenRouterAPI(`
       Make a list of a maximum of 7–10 questions in the same language as "${first}" and "${second}", the answers to which will help make a choice between "${first}" and "${second}".
       The answers to the questions should be brief.
-      Respond with a JavaScript array containing objects with the fields question and options.
-      Without any other sentences, characters, or explanations.
+      Return only a valid JavaScript array of 7–10 objects, each with fields "question" and "options". 
+      Do not include any other text, comments, quotes, explanations, markdown, or characters. 
+      Respond in a single line, no newlines, no formatting, and no extra output. 
+      Output must be strictly valid JSON and parseable using JSON.parse().
     `);
 
   return safeParse<Question[]>(
     content
       .replace(/(\s*)(\w+):/g, '$1"$2":')
       .replace(/^\`\`\`javascript\s*/, '')
-      .replace(/\s*\`\`\`$/, ''),
+      .replace(/\s*\`\`\`$/, '')
+      .replace(/\n/g, '')
+      .replace(/\\/g, ''),
     isQuestionArray,
   );
 }
