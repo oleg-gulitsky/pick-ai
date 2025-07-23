@@ -6,6 +6,11 @@ export function initRemoteConfig() {
     .setDefaults({
       current_model: MODELS.Deepseek_R1_0528_Qwen3_8B,
     })
+    .then(() =>
+      remoteConfig().setConfigSettings({
+        minimumFetchIntervalMillis: 300,
+      }),
+    )
     .then(() => remoteConfig().fetchAndActivate())
     .then(fetchedRemotely => {
       if (fetchedRemotely) {
@@ -19,5 +24,8 @@ export function initRemoteConfig() {
     .then(() => {
       const currentModel = remoteConfig().getValue('current_model').asString();
       setCurrentModel(currentModel);
+    })
+    .catch(error => {
+      console.error('Error with Remote Config operations:', error);
     });
 }

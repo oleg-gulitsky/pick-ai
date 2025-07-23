@@ -112,6 +112,9 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.appodeal.ads:sdk:3.5.0.0")
+    implementation('com.my.target:mytarget-sdk:5.27.1') {
+        exclude group: 'com.android.billingclient', module: 'billing'
+    }
     implementation("com.android.billingclient:billing:7.0.0")
     implementation platform("com.google.firebase:firebase-bom:33.16.0")
     implementation("com.google.firebase:firebase-analytics")
