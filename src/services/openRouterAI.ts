@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import { isQuestionArray, Question } from '../appTypes/Question';
 import { safeParse } from '../tools/safeParse';
 
@@ -41,6 +42,8 @@ async function callOpenRouterAPI(content: string) {
     );
 
     if (!response.ok) {
+      Alert.alert('Service Temporarily Unavailable', 'Please try again later');
+
       const errorText = await response.text();
       throw new Error(`HTTP error ${response.status}: ${errorText}`);
     }
@@ -62,18 +65,19 @@ export async function getQuestionsFromOpenRouter(
   second: string,
 ): Promise<Question[] | null> {
   const content = await callOpenRouterAPI(`
-      Make a list of a maximum of 7–10 questions in the same language as "${first}" and "${second}", the answers to which will help make a choice between "${first}" and "${second}".
+      Make a list of a maximum of 7–10 questions,
+      the answers to which will help make a choice between "${first}" and "${second}".
       The answers to the questions should be brief.
-      Return only a valid JavaScript array of 7–10 objects, each with fields "question" and "options". 
-      Do not include any other text, comments, quotes, explanations, markdown, or characters. 
-      Respond in a single line, no newlines, no formatting, and no extra output. 
+      Return only a valid JavaScript array of 7–10 objects, each with fields "question" and "options".
+      Do not include any other text, comments, quotes, explanations, markdown, or characters.
+      Respond in a single line, no newlines, no formatting, and no extra output.
       Output must be strictly valid JSON and parseable using JSON.parse().
     `);
 
   return safeParse<Question[]>(
     content
-      .replace(/(\s*)(\w+):/g, '$1"$2":')
       .replace(/^\`\`\`javascript\s*/, '')
+      .replace(/^\`\`\`json\s*/, '')
       .replace(/\s*\`\`\`$/, '')
       .replace(/\n/g, '')
       .replace(/\\/g, ''),
@@ -107,7 +111,6 @@ function getMessageForResultRequest(
     Make a choice between ${o} based on the answers to these questions.
     ${a}
     Briefly explain why you made this choice.
-    If the options are not in English, the response language must match answers language.
     Important! Do not use any formatting in your response!
   `;
 }

@@ -60,7 +60,6 @@ export function App() {
   };
 
   const handleNextPress = () => {
-    tryShowInterstitial();
     setFirstOption('');
     setSecondOption('');
     setResult('');
