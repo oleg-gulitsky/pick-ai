@@ -20,7 +20,7 @@ platform :android do
   lane :deploy_new_version do
     gradle(task: 'clean')
     gradle(
-      task: 'assemble',
+      task: 'bundle',
       build_type: 'Release',
       properties: {
         "android.injected.signing.store.file" => File.expand_path(ENV['KEYSTORE_FILE'], __dir__),
@@ -31,8 +31,20 @@ platform :android do
   )
 
   upload_to_play_store(
-    track: 'production',
-    release_status: 'draft',
+    track: 'internal',
+    release_status: 'completed',
+    skip_upload_apk: true,
+    aab: File.absolute_path('../app/build/outputs/bundle/release/app-release.aab'),
+  )
+
+  firebase_app_distribution(
+    app: ENV['FIREBASE_ANDROID_APP_ID'],
+    firebase_cli_token: ENV['FIREBASE_TOKEN'],
+    groups: 'testers',
+    android_artifact_type: "AAB",
+    service_credentials_file: "play-account.json",
+    android_artifact_path: File.absolute_path('../app/build/outputs/bundle/release/app-release.aab'),
+    release_notes: "Lots of amazing new features to test out!",
   )
   end
 end
