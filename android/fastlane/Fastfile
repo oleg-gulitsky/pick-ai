@@ -44,7 +44,6 @@ platform :android do
     android_artifact_type: "AAB",
     service_credentials_file: "play-account.json",
     android_artifact_path: File.absolute_path('../app/build/outputs/bundle/release/app-release.aab'),
-    release_notes: "Lots of amazing new features to test out!",
   )
   end
 end
