@@ -20,7 +20,7 @@ platform :android do
     firebase_cli_token: ENV['FIREBASE_TOKEN'],
     groups: 'testers',
     android_artifact_type: "AAB",
-    service_credentials_file: "play-account.json",
+    service_credentials_file: File.absolute_path('../play-account.json', __dir__),
     android_artifact_path: File.absolute_path('../app/build/outputs/bundle/release/app-release.aab'),
   )
   
