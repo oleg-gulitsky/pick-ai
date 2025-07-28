@@ -1,0 +1,74 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: ['main']
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    environment: Default
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3.5'
+          bundler-cache: true
+
+      - name: Set up Fastlane
+        working-directory: android
+        run: bundle install
+
+      - name: Set up keystore
+        working-directory: android
+        run: |
+          if [ -z "${{ secrets.KEYSTORE_FILE }}" ]; then
+            echo "❌ Missing secret: KEYSTORE_FILE"
+            exit 1
+          fi
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > keystore.jks
+
+      - name: Set up Google Play Config
+        working-directory: android
+        run: |
+          if [ -z "${{ secrets.GOOGLE_PLAY_JSON }}" ]; then
+            echo "❌ Missing secret: GOOGLE_PLAY_JSON"
+            exit 1
+          fi
+          echo "${{ secrets.GOOGLE_PLAY_JSON }}" > play-account.json
+
+      - name: Build and deploy with Fastlane
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: fastlane deploy_new_version
