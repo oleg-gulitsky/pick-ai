@@ -3,17 +3,17 @@ default_platform(:android)
 platform :android do
   desc "Android Production Build and Deploy to Play Store Production"
   lane :deploy_new_version do
-    gradle(task: 'clean')
-    gradle(
-      task: 'bundle',
-      build_type: 'Release',
-      properties: {
-        "android.injected.signing.store.file" => File.absolute_path('../keystore.jks', __dir__),
-        "android.injected.signing.store.password" => ENV['KEYSTORE_PASSWORD'],
-        "android.injected.signing.key.alias" => ENV['KEY_ALIAS'],
-        "android.injected.signing.key.password" => ENV['KEY_PASSWORD'],
-    }
-  )
+  #   gradle(task: 'clean')
+  #   gradle(
+  #     task: 'bundle',
+  #     build_type: 'Release',
+  #     properties: {
+  #       "android.injected.signing.store.file" => File.absolute_path('../keystore.jks', __dir__),
+  #       "android.injected.signing.store.password" => ENV['KEYSTORE_PASSWORD'],
+  #       "android.injected.signing.key.alias" => ENV['KEY_ALIAS'],
+  #       "android.injected.signing.key.password" => ENV['KEY_PASSWORD'],
+  #   }
+  # )
 
   firebase_app_distribution(
     app: ENV['FIREBASE_ANDROID_APP_ID'],
