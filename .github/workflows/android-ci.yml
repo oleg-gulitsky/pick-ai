@@ -60,7 +60,7 @@ jobs:
             echo "❌ Missing secret: GOOGLE_PLAY_JSON"
             exit 1
           fi
-          echo "${{ secrets.GOOGLE_PLAY_JSON }}" > play-account.json
+          echo "${{ secrets.GOOGLE_PLAY_JSON }}" | base64 -d > play-account.json
 
       - name: Build and deploy with Fastlane
         working-directory: android
