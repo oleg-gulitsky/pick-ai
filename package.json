@@ -9,7 +9,7 @@
     "start": "react-native start",
     "test": "jest",
     "version": "node scripts/updateNativeVersions.js",
-    "postversion": "git add android/app/build.gradle ios/PickAI/Info.plist && git commit --amend --no-edit"
+    "postversion": "git add android/app/build.gradle ios/PickAI/Info.plist && git commit --amend --no-edit && git tag -f v$(node -p \"require('./package.json').version\")"
   },
   "dependencies": {
     "@react-native-firebase/analytics": "^22.4.0",
