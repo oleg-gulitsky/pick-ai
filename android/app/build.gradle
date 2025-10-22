@@ -111,7 +111,12 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation("com.appodeal.ads:sdk:3.5.0.0")
+    implementation ('com.appodeal.ads:sdk:3.10.0.0') {
+        exclude group: 'com.appodeal.ads.sdk.services', module: 'adjust'
+        exclude group: 'com.appodeal.ads.sdk.services', module: 'appsflyer'
+        exclude group: 'com.appodeal.ads.sdk.services', module: 'firebase'
+        exclude group: 'com.appodeal.ads.sdk.services', module: 'facebook_analytics'
+    }
     implementation('com.my.target:mytarget-sdk:5.27.1') {
         exclude group: 'com.android.billingclient', module: 'billing'
     }

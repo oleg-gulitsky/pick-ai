@@ -1,10 +1,9 @@
-import {
-  Appodeal,
+import Appodeal, {
   AppodealAdType,
-  AppodealBannerEvent,
-  AppodealInterstitialEvent,
-  AppodealRewardedEvent,
-  AppodealSdkEvent,
+  AppodealBannerEvents,
+  AppodealInterstitialEvents,
+  AppodealRewardedEvents,
+  AppodealSdkEvents,
 } from 'react-native-appodeal';
 
 const isShowEventDevLogs = false;
@@ -37,9 +36,9 @@ export function tryShowInterstitial(cb?: EventHandler) {
   if (Appodeal.canShow(AppodealAdType.INTERSTITIAL)) {
     const handler = () => {
       cb && cb();
-      Appodeal.removeEventListener(AppodealInterstitialEvent.CLOSED, handler);
+      Appodeal.removeEventListener(AppodealInterstitialEvents.CLOSED, handler);
     };
-    Appodeal.addEventListener(AppodealInterstitialEvent.CLOSED, handler);
+    Appodeal.addEventListener(AppodealInterstitialEvents.CLOSED, handler);
     Appodeal.show(AppodealAdType.INTERSTITIAL);
   } else {
     cb && cb();
@@ -52,9 +51,9 @@ export function tryShowRewarded(cb?: EventHandler) {
       if (event.isFinished) {
         cb && cb();
       }
-      Appodeal.removeEventListener(AppodealRewardedEvent.CLOSED, handler);
+      Appodeal.removeEventListener(AppodealRewardedEvents.CLOSED, handler);
     };
-    Appodeal.addEventListener(AppodealRewardedEvent.CLOSED, handler);
+    Appodeal.addEventListener(AppodealRewardedEvents.CLOSED, handler);
     Appodeal.show(AppodealAdType.REWARDED_VIDEO);
   } else {
     cb && cb();
@@ -73,51 +72,51 @@ function addEventDevLogs() {
 
 const eventDevLogs = {
   //SDK
-  [AppodealSdkEvent.INITIALIZED]: () =>
+  [AppodealSdkEvents.INITIALIZED]: () =>
     console.log('Appodeal SDK did initialize'),
 
   //Banner
-  [AppodealBannerEvent.LOADED]: (event: any) =>
+  [AppodealBannerEvents.LOADED]: (event: any) =>
     console.log(
       'Banner loaded. Height: ',
       event.height + ', precache: ' + event.isPrecache,
     ),
-  [AppodealBannerEvent.SHOWN]: () => console.log('Banner shown'),
-  [AppodealBannerEvent.EXPIRED]: () => console.log('Banner expired'),
-  [AppodealBannerEvent.CLICKED]: () => console.log('Banner was clicked'),
-  [AppodealBannerEvent.FAILED_TO_LOAD]: () =>
+  [AppodealBannerEvents.SHOWN]: () => console.log('Banner shown'),
+  [AppodealBannerEvents.EXPIRED]: () => console.log('Banner expired'),
+  [AppodealBannerEvents.CLICKED]: () => console.log('Banner was clicked'),
+  [AppodealBannerEvents.FAILED_TO_LOAD]: () =>
     console.log('Banner failed to load'),
 
   //Interstitial
-  [AppodealInterstitialEvent.LOADED]: (event: any) =>
+  [AppodealInterstitialEvents.LOADED]: (event: any) =>
     console.log('Interstitial loaded. Precache: ', event.isPrecache),
-  [AppodealInterstitialEvent.SHOWN]: () => console.log('Interstitial shown'),
-  [AppodealInterstitialEvent.EXPIRED]: () =>
+  [AppodealInterstitialEvents.SHOWN]: () => console.log('Interstitial shown'),
+  [AppodealInterstitialEvents.EXPIRED]: () =>
     console.log('Interstitial expired'),
-  [AppodealInterstitialEvent.CLICKED]: () =>
+  [AppodealInterstitialEvents.CLICKED]: () =>
     console.log('Interstitial was clicked'),
-  [AppodealInterstitialEvent.CLOSED]: () => console.log('Interstitial closed'),
-  [AppodealInterstitialEvent.FAILED_TO_LOAD]: () =>
+  [AppodealInterstitialEvents.CLOSED]: () => console.log('Interstitial closed'),
+  [AppodealInterstitialEvents.FAILED_TO_LOAD]: () =>
     console.log('Interstitial failed to load'),
-  [AppodealInterstitialEvent.FAILED_TO_SHOW]: () =>
+  [AppodealInterstitialEvents.FAILED_TO_SHOW]: () =>
     console.log('Interstitial failed to show'),
 
   //Rewarded
-  [AppodealRewardedEvent.LOADED]: (event: any) =>
+  [AppodealRewardedEvents.LOADED]: (event: any) =>
     console.log('Rewarded video loaded. Precache: ', event.isPrecache),
-  [AppodealRewardedEvent.SHOWN]: () => console.log('Rewarded video shown'),
-  [AppodealRewardedEvent.EXPIRED]: () => console.log('Rewarded video expired'),
-  [AppodealRewardedEvent.CLICKED]: () =>
+  [AppodealRewardedEvents.SHOWN]: () => console.log('Rewarded video shown'),
+  [AppodealRewardedEvents.EXPIRED]: () => console.log('Rewarded video expired'),
+  [AppodealRewardedEvents.CLICKED]: () =>
     console.log('Rewarded video was clicked'),
-  [AppodealRewardedEvent.REWARD]: (event: any) =>
+  [AppodealRewardedEvents.REWARD]: (event: any) =>
     console.log(
       'Rewarded video finished. Amount: ',
       event.amount + ', currency: ' + event.currency,
     ),
-  [AppodealRewardedEvent.CLOSED]: (event: any) =>
+  [AppodealRewardedEvents.CLOSED]: (event: any) =>
     console.log('Rewarded video closed, is finished: ', event.isFinished),
-  [AppodealRewardedEvent.FAILED_TO_LOAD]: () =>
+  [AppodealRewardedEvents.FAILED_TO_LOAD]: () =>
     console.log('Rewarded video failed to load'),
-  [AppodealRewardedEvent.FAILED_TO_SHOW]: () =>
+  [AppodealRewardedEvents.FAILED_TO_SHOW]: () =>
     console.log('Rewarded video failed to show'),
 };
