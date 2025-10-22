@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
-import { useState, useRef, useEffect } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput } from 'react-native';
-import { Question } from './appTypes/Question';
+import { useState, useEffect } from 'react';
+import { ScrollView, Text, TextInput } from 'react-native';
 import {
   getQuestionsFromOpenRouter,
   getResultFromOpenRouter,
@@ -12,16 +11,25 @@ import { BasicButton } from './components/basic/BasicButton';
 import { STRINGS } from './constants/strings';
 import { initAds, tryShowInterstitial } from './modules/ads';
 import { initRemoteConfig } from './modules/remoteConfig';
+import { usePendingStore } from './store/usePendingStore';
+import { useQuizStore } from './store/useQuizStore';
 
 export function App() {
+  const setIsPendingFalse = usePendingStore.use.setIsPendingFalse();
+  const setIsPendingTrue = usePendingStore.use.setIsPendingTrue();
+
+  const questions = useQuizStore.use.questions();
+  const setQuestions = useQuizStore.use.setQuestions();
+  const answers = useQuizStore.use.answers();
+  const addAnswer = useQuizStore.use.addAnswer();
+  const questionIndex = useQuizStore.use.currentQuestionIndex();
+  const setQuestionIndex = useQuizStore.use.setCurrentQuestionIndex();
+  const result = useQuizStore.use.result();
+  const setResult = useQuizStore.use.setResult();
+  const resetQuiz = useQuizStore.use.resetQuiz();
+
   const [firstOption, setFirstOption] = useState('');
   const [secondOption, setSecondOption] = useState('');
-  const [pending, setPending] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [result, setResult] = useState('');
-
-  const answers = useRef<number[]>([]);
 
   useEffect(() => {
     initAds();
@@ -30,52 +38,33 @@ export function App() {
 
   const handleGetQuestionsPress = () => {
     tryShowInterstitial();
-    setPending(true);
+    setIsPendingTrue();
     getQuestionsFromOpenRouter(firstOption, secondOption)
       .then(res => {
         res && setQuestions(res);
       })
-      .finally(() => setPending(false));
+      .finally(() => setIsPendingFalse());
   };
 
   const handleOptionPress = (index: number, value: number) => {
-    answers.current[index] = value;
-
+    addAnswer(index, value);
     if (index + 1 >= questions.length) {
       tryShowInterstitial();
-      setPending(true);
-      setQuestions([]);
-      setQuestionIndex(0);
-      getResultFromOpenRouter(
-        [firstOption, secondOption],
-        questions,
-        answers.current,
-      )
+      setIsPendingTrue();
+      getResultFromOpenRouter([firstOption, secondOption], questions, answers)
         .then(res => setResult(res))
-        .finally(() => setPending(false));
+        .finally(() => setIsPendingFalse());
       return;
     }
 
-    setQuestionIndex(prev => ++prev);
+    setQuestionIndex(questionIndex + 1);
   };
 
   const handleNextPress = () => {
     setFirstOption('');
     setSecondOption('');
-    setResult('');
+    resetQuiz();
   };
-
-  if (pending) {
-    return (
-      <Container>
-        <ActivityIndicator
-          style={styles.activityIndicator}
-          size="large"
-          color={COLORS.DUTCH_WHITE}
-        />
-      </Container>
-    );
-  }
 
   if (result) {
     return (
@@ -151,9 +140,6 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'absolute',
     bottom: 70,
-  },
-  activityIndicator: {
-    marginTop: '70%',
   },
   text: {
     color: COLORS.DUTCH_WHITE,
