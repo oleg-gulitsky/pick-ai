@@ -4,6 +4,8 @@ import { Question } from '../appTypes/Question';
 import { createSelectors } from './createSelectors';
 
 type State = {
+  firstOption: string;
+  secondOption: string;
   questions: Question[];
   answers: number[];
   currentQuestionIndex: number;
@@ -11,6 +13,10 @@ type State = {
 };
 
 type Action = {
+  setOptions: (
+    firstOption: State['firstOption'],
+    secondOption: State['secondOption'],
+  ) => void;
   setQuestions: (questions: State['questions']) => void;
   setCurrentQuestionIndex: (
     currentQuestionIndex: State['currentQuestionIndex'],
@@ -21,6 +27,8 @@ type Action = {
 };
 
 const defaultState: State = {
+  firstOption: '',
+  secondOption: '',
   questions: [],
   answers: [],
   currentQuestionIndex: 0,
@@ -30,6 +38,8 @@ const defaultState: State = {
 const useQuizStoreBase = create<State & Action>()(
   immer(set => ({
     ...defaultState,
+    setOptions: (firstOption, secondOption) =>
+      set(() => ({ firstOption, secondOption })),
     setQuestions: questions => set(() => ({ questions })),
     setCurrentQuestionIndex: currentQuestionIndex =>
       set(() => ({ currentQuestionIndex })),
