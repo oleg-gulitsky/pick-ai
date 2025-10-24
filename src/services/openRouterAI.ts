@@ -1,4 +1,5 @@
 import { Alert } from 'react-native';
+import Config from 'react-native-config';
 import { isQuestionArray, Question } from '../appTypes/Question';
 import { safeParse } from '../tools/safeParse';
 
@@ -25,8 +26,7 @@ async function callOpenRouterAPI(content: string) {
       {
         method: 'POST',
         headers: {
-          Authorization:
-            'Bearer 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',
+          Authorization: Config.OPEN_ROUTER_API_KEY,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

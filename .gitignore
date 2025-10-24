@@ -77,3 +77,9 @@ yarn-error.log
 android/play-account.json
 android/keystore.jks
 android/.env
+
+.vscode/
+.kiro/
+.env
+# react-native-config codegen
+ios/tmp.xcconfig
