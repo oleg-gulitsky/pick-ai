@@ -26,7 +26,7 @@ async function callOpenRouterAPI(content: string) {
       {
         method: 'POST',
         headers: {
-          Authorization: Config.OPEN_ROUTER_API_KEY,
+          Authorization: `Bearer ${Config.OPEN_ROUTER_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

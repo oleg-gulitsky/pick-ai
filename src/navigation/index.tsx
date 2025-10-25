@@ -1,8 +1,12 @@
 import {
   createStaticNavigation,
   StaticParamList,
+  useNavigation,
 } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import {
+  createNativeStackNavigator,
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 import { OptionsScreen } from './screens/OptionsScreen';
 import { QuizScreen } from './screens/QuizScreen';
 import { ResultScreen } from './screens/ResultScreen';
@@ -31,3 +35,9 @@ declare global {
 const Navigation = createStaticNavigation(RootStack);
 
 export default Navigation;
+
+export function useAppNavigation() {
+  return useNavigation<
+    NativeStackNavigationProp<ReactNavigation.RootParamList>
+  >();
+}

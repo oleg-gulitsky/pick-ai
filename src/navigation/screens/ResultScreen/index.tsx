@@ -1,21 +1,12 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useQuizStore } from '../../store/useQuizStore';
-import { Container } from '../../components/basic/Container';
-import { BasicButton } from '../../components/basic/BasicButton';
-import { STRINGS } from '../../constants/strings';
-import { COLORS } from '../../constants/colors';
+import { Container } from '../../../components/basic/Container';
+import { BasicButton } from '../../../components/basic/BasicButton';
+import { STRINGS } from '../../../constants/strings';
+import { COLORS } from '../../../constants/colors';
+import { useResult } from './useResult';
 
 export function ResultScreen() {
-  const { navigate } = useNavigation();
-
-  const result = useQuizStore.use.result();
-  const resetQuiz = useQuizStore.use.resetQuiz();
-
-  const handleNextPress = () => {
-    resetQuiz();
-    navigate('Options');
-  };
+  const { result, handleNextPress } = useResult();
 
   return (
     <Container>

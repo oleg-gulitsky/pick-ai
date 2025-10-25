@@ -18,9 +18,6 @@ type Action = {
     secondOption: State['secondOption'],
   ) => void;
   setQuestions: (questions: State['questions']) => void;
-  setCurrentQuestionIndex: (
-    currentQuestionIndex: State['currentQuestionIndex'],
-  ) => void;
   addAnswer: (index: number, value: number) => void;
   setResult: (result: State['result']) => void;
   resetQuiz: () => void;
@@ -41,10 +38,9 @@ const useQuizStoreBase = create<State & Action>()(
     setOptions: (firstOption, secondOption) =>
       set(() => ({ firstOption, secondOption })),
     setQuestions: questions => set(() => ({ questions })),
-    setCurrentQuestionIndex: currentQuestionIndex =>
-      set(() => ({ currentQuestionIndex })),
     addAnswer: (index, answer) =>
       set(state => {
+        state.currentQuestionIndex = index + 1;
         state.answers[index] = answer;
       }),
     setResult: result => set(() => ({ result })),
