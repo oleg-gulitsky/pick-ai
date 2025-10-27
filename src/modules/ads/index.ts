@@ -6,13 +6,15 @@ import Appodeal, {
   AppodealSdkEvents,
 } from 'react-native-appodeal';
 
-const isShowEventDevLogs = false;
+type initAdsParams = {
+  appodealAppKey: string;
+  isShowEventDevLogs?: boolean;
+};
 
-const appodealAppKey = '56020f47ab9ab1331588b2daaab8144c77511c39c95bbf69';
-
-type EventHandler = (params?: any) => void;
-
-export function initAds() {
+export function initAds({
+  appodealAppKey,
+  isShowEventDevLogs = false,
+}: initAdsParams) {
   if (__DEV__ && isShowEventDevLogs) {
     addEventDevLogs();
   }
@@ -32,32 +34,39 @@ export function initAds() {
   Appodeal.show(AppodealAdType.BANNER_BOTTOM);
 }
 
-export function tryShowInterstitial(cb?: EventHandler) {
-  if (Appodeal.canShow(AppodealAdType.INTERSTITIAL)) {
-    const handler = () => {
-      cb && cb();
-      Appodeal.removeEventListener(AppodealInterstitialEvents.CLOSED, handler);
-    };
-    Appodeal.addEventListener(AppodealInterstitialEvents.CLOSED, handler);
-    Appodeal.show(AppodealAdType.INTERSTITIAL);
-  } else {
-    cb && cb();
-  }
+export function tryShowInterstitial(placement?: string): Promise<boolean> {
+  return new Promise(resolve => {
+    if (Appodeal.canShow(AppodealAdType.INTERSTITIAL)) {
+      const handler = () => {
+        resolve(true);
+        Appodeal.removeEventListener(
+          AppodealInterstitialEvents.CLOSED,
+          handler,
+        );
+      };
+      Appodeal.addEventListener(AppodealInterstitialEvents.CLOSED, handler);
+      Appodeal.show(AppodealAdType.INTERSTITIAL, placement);
+    } else {
+      resolve(false);
+    }
+  });
 }
 
-export function tryShowRewarded(cb?: EventHandler) {
-  if (Appodeal.canShow(AppodealAdType.REWARDED_VIDEO)) {
-    const handler = (event: any) => {
-      if (event.isFinished) {
-        cb && cb();
-      }
-      Appodeal.removeEventListener(AppodealRewardedEvents.CLOSED, handler);
-    };
-    Appodeal.addEventListener(AppodealRewardedEvents.CLOSED, handler);
-    Appodeal.show(AppodealAdType.REWARDED_VIDEO);
-  } else {
-    cb && cb();
-  }
+export function tryShowRewarded(placement?: string): Promise<boolean> {
+  return new Promise(resolve => {
+    if (Appodeal.canShow(AppodealAdType.REWARDED_VIDEO)) {
+      const handler = (event: any) => {
+        if (event.isFinished) {
+          resolve(true);
+        }
+        Appodeal.removeEventListener(AppodealRewardedEvents.CLOSED, handler);
+      };
+      Appodeal.addEventListener(AppodealRewardedEvents.CLOSED, handler);
+      Appodeal.show(AppodealAdType.REWARDED_VIDEO, placement);
+    } else {
+      resolve(false);
+    }
+  });
 }
 
 function addEventHandlers(eventMap: Record<string, (event?: any) => void>) {
