@@ -1,31 +1,42 @@
-import remoteConfig from '@react-native-firebase/remote-config';
-import { MODELS, setCurrentModel } from '../../services/openRouterAI';
+import remoteConfig, {
+  FirebaseRemoteConfigTypes,
+} from '@react-native-firebase/remote-config';
 
-export function initRemoteConfig() {
-  remoteConfig()
-    .setDefaults({
-      current_model: MODELS.Deepseek_R1_0528_Qwen3_8B,
-    })
-    .then(() =>
-      remoteConfig().setConfigSettings({
-        minimumFetchIntervalMillis: 300,
-      }),
-    )
-    .then(() => remoteConfig().fetchAndActivate())
-    .then(fetchedRemotely => {
-      if (fetchedRemotely) {
-        console.log('Configs were retrieved from the backend and activated.');
-      } else {
-        console.log(
-          'No configs were fetched from the backend, and the local configs were already activated',
-        );
-      }
-    })
-    .then(() => {
-      const currentModel = remoteConfig().getValue('current_model').asString();
-      setCurrentModel(currentModel);
-    })
-    .catch(error => {
-      console.error('Error with Remote Config operations:', error);
+export const DEFAULT_REMOTE_CONFIG_SETTINGS = {
+  minimumFetchIntervalMillis: 300,
+};
+
+type initRemoteConfigParams = {
+  configDefaults: FirebaseRemoteConfigTypes.ConfigDefaults;
+  configSettings?: FirebaseRemoteConfigTypes.ConfigSettings;
+};
+
+export async function initRemoteConfig({
+  configDefaults,
+  configSettings,
+}: initRemoteConfigParams) {
+  try {
+    await remoteConfig().setDefaults(configDefaults);
+
+    await remoteConfig().setConfigSettings({
+      ...DEFAULT_REMOTE_CONFIG_SETTINGS,
+      ...configSettings,
     });
+
+    const fetchedRemotely = await remoteConfig().fetchAndActivate();
+
+    if (fetchedRemotely && __DEV__) {
+      console.log('Configs were retrieved from the backend and activated.');
+    } else {
+      console.log(
+        'No configs were fetched from the backend, and the local configs were already activated',
+      );
+    }
+  } catch (error) {
+    console.error('Error with Remote Config operations:', error);
+  }
+}
+
+export function getRemoteValue(key: string) {
+  return remoteConfig().getValue(key).asString();
 }
