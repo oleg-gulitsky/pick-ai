@@ -3,7 +3,7 @@ import { usePendingStore } from '../../../store/usePendingStore';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { useAppNavigation } from '../..';
 import { tryShowInterstitial } from '../../../modules/ads';
-import { getResultFromOpenRouter } from '../../../services/openRouterAI';
+import { tryGetResult } from '../../../modules/ai';
 
 export function useQuiz() {
   const navigation = useAppNavigation();
@@ -16,14 +16,21 @@ export function useQuiz() {
   const setIsPendingTrue = usePendingStore.use.setIsPendingTrue();
   const setIsPendingFalse = usePendingStore.use.setIsPendingFalse();
   const setResult = useQuizStore.use.setResult();
+  const resetQuiz = useQuizStore.use.resetQuiz();
 
   useEffect(() => {
     if (questions.length > 0 && answers.length >= questions.length) {
       setIsPendingTrue();
       tryShowInterstitial();
-      navigation.replace('Result');
-      getResultFromOpenRouter([firstOption, secondOption], questions, answers)
-        .then(res => setResult(res))
+      tryGetResult([firstOption, secondOption], questions, answers)
+        .then(res => {
+          setResult(res);
+          navigation.replace('Result');
+        })
+        .catch(() => {
+          resetQuiz();
+          navigation.replace('Options');
+        })
         .finally(() => setIsPendingFalse());
     }
   }, [
@@ -31,6 +38,7 @@ export function useQuiz() {
     firstOption,
     navigation,
     questions,
+    resetQuiz,
     secondOption,
     setIsPendingFalse,
     setIsPendingTrue,

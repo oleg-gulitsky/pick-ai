@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { usePendingStore } from '../../../store/usePendingStore';
-import { getQuestionsFromOpenRouter } from '../../../services/openRouterAI';
+import { tryGetQuestions } from '../../../modules/ai';
 import { tryShowInterstitial } from '../../../modules/ads';
 import { useAppNavigation } from '../..';
 
@@ -29,7 +29,7 @@ export function useOptionsForm() {
       setIsPendingTrue();
       navigation.replace('Quiz');
 
-      const result = await getQuestionsFromOpenRouter(
+      const result = await tryGetQuestions(
         firstOption,
         secondOption,
       );

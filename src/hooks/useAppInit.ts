@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Config from 'react-native-config';
 import { initAds } from '../modules/ads';
 import { getRemoteValue, initRemoteConfig } from '../modules/remoteConfig';
-import { setCurrentModel } from '../services/openRouterAI';
+import { setAIModels, setOpenRouterAPIKey } from '../modules/ai';
 import {
   REMOTE_CONFIG_DEFAULTS,
   REMOTE_CONFIG_KEYS,
@@ -16,7 +16,10 @@ export function useAppInit() {
     initRemoteConfig({
       configDefaults: REMOTE_CONFIG_DEFAULTS,
     }).then(() => {
-      setCurrentModel(getRemoteValue(REMOTE_CONFIG_KEYS.CURRENT_MODEL));
+      setAIModels(JSON.parse(getRemoteValue(REMOTE_CONFIG_KEYS.AI_MODELS)));
+      setOpenRouterAPIKey(
+        getRemoteValue(REMOTE_CONFIG_KEYS.OPENROUTER_API_KEY),
+      );
     });
   }, []);
 }
