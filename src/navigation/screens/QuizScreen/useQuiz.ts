@@ -4,9 +4,11 @@ import { useQuizStore } from '../../../store/useQuizStore';
 import { useAppNavigation } from '../..';
 import { tryShowInterstitial } from '../../../modules/ads';
 import { tryGetResult } from '../../../modules/ai';
+import { useHandleServiceError } from '../../../hooks/useHandleServiceError';
 
 export function useQuiz() {
   const navigation = useAppNavigation();
+  const handleServiceError = useHandleServiceError();
   const firstOption = useQuizStore.use.firstOption();
   const secondOption = useQuizStore.use.secondOption();
   const questions = useQuizStore.use.questions();
@@ -29,13 +31,14 @@ export function useQuiz() {
         })
         .catch(() => {
           resetQuiz();
-          navigation.replace('Options');
+          handleServiceError('Options');
         })
         .finally(() => setIsPendingFalse());
     }
   }, [
     answers,
     firstOption,
+    handleServiceError,
     navigation,
     questions,
     resetQuiz,

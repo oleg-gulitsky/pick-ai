@@ -1,6 +1,3 @@
-import { Alert } from 'react-native';
-import Config from 'react-native-config';
-
 interface APIResponse {
   choices: Array<{
     message: {
@@ -19,7 +16,7 @@ function isValidAPIResponse(data: any): data is APIResponse {
 }
 
 const BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
-let APIKey = Config.OPEN_ROUTER_API_KEY;
+let APIKey = '';
 let AIModels: string[] = [];
 
 export function setAIModels(models: string[]) {
@@ -33,10 +30,8 @@ export function setOpenRouterAPIKey(newKey: string) {
 async function tryModelRequest(
   model: string,
   content: string,
-): Promise<string | null> {
+): Promise<string> {
   try {
-    console.log(`Trying model: ${model}`);
-
     const response = await fetch(BASE_URL, {
       method: 'POST',
       headers: {
@@ -56,24 +51,21 @@ async function tryModelRequest(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.warn(
+      throw new Error(
         `Model ${model} failed with HTTP ${response.status}: ${errorText}`,
       );
-      return null;
+    } else {
+      const data = await response.json();
+
+      if (!isValidAPIResponse(data)) {
+        throw new Error(`Model ${model} returned invalid response format`);
+      }
+
+      return data.choices[0].message.content;
     }
-
-    const data = await response.json();
-
-    if (!isValidAPIResponse(data)) {
-      console.warn(`Model ${model} returned invalid response format`);
-      return null;
-    }
-
-    console.log(`Model ${model} succeeded`);
-    return data.choices[0].message.content;
   } catch (error) {
-    console.warn(`Model ${model} request failed:`, error);
-    return null;
+    console.warn(error);
+    throw error;
   }
 }
 
@@ -85,17 +77,14 @@ export async function callOpenRouterAPI(content: string): Promise<string> {
   const promises = AIModels.map(model => tryModelRequest(model, content));
 
   try {
-    const results = await Promise.allSettled(promises);
+    const result = await Promise.any(promises);
 
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value !== null) {
-        return result.value;
-      }
+    if (result !== null) {
+      return result;
     }
   } catch (error) {
-    console.error('Unexpected error in parallel requests:', error);
+    console.error('All AI models failed');
   }
 
-  Alert.alert('Service Temporarily Unavailable', 'Please try again later');
   throw new Error('All AI models failed to provide a valid response');
 }

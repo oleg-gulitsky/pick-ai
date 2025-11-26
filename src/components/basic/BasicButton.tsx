@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   GestureResponderEvent,
   Pressable,
@@ -14,7 +15,9 @@ interface BasicButtonProps {
   style?: ViewStyle;
 }
 
-export function BasicButton({
+export const BasicButton = memo(BasicButtonComponent);
+
+export function BasicButtonComponent({
   disabled = false,
   onPress,
   title,

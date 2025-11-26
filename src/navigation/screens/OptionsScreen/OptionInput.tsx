@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, TextInput, TextInputProps } from 'react-native';
 import { COLORS } from '../../../constants/colors';
 
@@ -6,7 +7,9 @@ interface OptionInputProps extends TextInputProps {
   onChangeText: (text: string) => void;
 }
 
-export function OptionInput({
+export const OptionInput = memo(OptionInputComponent)
+
+function OptionInputComponent({
   value,
   onChangeText,
   ...props

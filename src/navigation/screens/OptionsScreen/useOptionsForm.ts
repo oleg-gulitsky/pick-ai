@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { usePendingStore } from '../../../store/usePendingStore';
 import { tryGetQuestions } from '../../../modules/ai';
 import { tryShowInterstitial } from '../../../modules/ads';
 import { useAppNavigation } from '../..';
+import { useHandleServiceError } from '../../../hooks/useHandleServiceError';
 
 export function useOptionsForm() {
   const navigation = useAppNavigation();
+  const handleServiceError = useHandleServiceError();
   const setIsPendingFalse = usePendingStore.use.setIsPendingFalse();
   const setIsPendingTrue = usePendingStore.use.setIsPendingTrue();
   const setQuestions = useQuizStore.use.setQuestions();
@@ -17,34 +19,48 @@ export function useOptionsForm() {
 
   const isValid = Boolean(firstOption && secondOption);
 
-  const handleFirstOptionChange = (value: string) => setFirstOption(value);
-  const handleSecondOptionChange = (value: string) => setSecondOption(value);
+  const handleFirstOptionChange = useCallback(
+    (value: string) => setFirstOption(value),
+    [],
+  );
+  const handleSecondOptionChange = useCallback(
+    (value: string) => setSecondOption(value),
+    [],
+  );
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(() => {
     if (!isValid) return;
 
-    try {
-      tryShowInterstitial();
-      setOptions(firstOption, secondOption);
-      setIsPendingTrue();
-      navigation.replace('Quiz');
+    tryShowInterstitial();
+    setOptions(firstOption, secondOption);
+    setIsPendingTrue();
+    navigation.replace('Quiz');
 
-      const result = await tryGetQuestions(
-        firstOption,
-        secondOption,
-      );
-
-      if (result) {
-        setQuestions(result);
-      } else {
-        navigation.replace('Options');
-      }
-    } catch (error) {
-      navigation.replace('Options');
-    } finally {
-      setIsPendingFalse();
-    }
-  };
+    tryGetQuestions(firstOption, secondOption)
+      .then(res => {
+        if (res) {
+          setQuestions(res);
+        } else {
+          handleServiceError('Options');
+        }
+      })
+      .catch(() => {
+        handleServiceError('Options');
+      })
+      .finally(() => {
+        setIsPendingFalse();
+      });
+  }, [
+    firstOption,
+    handleServiceError,
+    isValid,
+    navigation,
+    secondOption,
+    setIsPendingFalse,
+    setIsPendingTrue,
+    setOptions,
+    setQuestions,
+  ]);
 
   return {
     firstOption,
