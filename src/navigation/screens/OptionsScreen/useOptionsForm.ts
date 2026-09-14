@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { usePendingStore } from '../../../store/usePendingStore';
-import { tryShowInterstitial } from '../../../modules/ads';
+import { tryShowInterstitial } from '../../../services/ads';
 import { useAppNavigation } from '../..';
 
 export function useOptionsForm() {

@@ -50,7 +50,7 @@ Mobile app that helps you make difficult choices through AI-generated questions 
 src/
 ├── components/     # Reusable UI components
 ├── navigation/     # Screen navigation and routing
-├── modules/        # Feature modules (AI, ads, etc.)
+├── services/       # Services (AI, ads, remote config)
 ├── hooks/          # Custom React hooks
 ├── store/          # State management
 ├── constants/      # App constants and configuration

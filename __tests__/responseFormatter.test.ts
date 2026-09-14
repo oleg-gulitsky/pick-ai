@@ -1,7 +1,7 @@
 import {
   formatQuestionsResponse,
   formatResultResponse,
-} from '../src/modules/ai/responseFormatter';
+} from '../src/services/ai/responseFormatter';
 
 const questions = [
   { question: 'What is your budget?', options: ['Low', 'High'] },

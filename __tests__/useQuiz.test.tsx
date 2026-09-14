@@ -1,7 +1,7 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
 import { Question } from '../src/appTypes/Question';
-import { tryShowInterstitial } from '../src/modules/ads';
-import { tryGetQuestions, tryGetResult } from '../src/modules/ai';
+import { tryShowInterstitial } from '../src/services/ads';
+import { tryGetQuestions, tryGetResult } from '../src/services/ai';
 import { useQuiz } from '../src/navigation/screens/QuizScreen/useQuiz';
 import { usePendingStore } from '../src/store/usePendingStore';
 import { useQuizStore } from '../src/store/useQuizStore';
@@ -15,11 +15,11 @@ jest.mock('../src/navigation', () => ({
 jest.mock('../src/hooks/useHandleServiceError', () => ({
   useHandleServiceError: () => mockHandleServiceError,
 }));
-jest.mock('../src/modules/ai', () => ({
+jest.mock('../src/services/ai', () => ({
   tryGetQuestions: jest.fn(),
   tryGetResult: jest.fn(),
 }));
-jest.mock('../src/modules/ads', () => ({
+jest.mock('../src/services/ads', () => ({
   tryShowInterstitial: jest.fn(),
 }));
 

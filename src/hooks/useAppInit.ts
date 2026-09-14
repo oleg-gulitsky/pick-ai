@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import Config from 'react-native-config';
-import { initAds } from '../modules/ads';
-import { getRemoteValue, initRemoteConfig } from '../modules/remoteConfig';
-import { setAIModels, setOpenRouterAPIKey } from '../modules/ai';
+import { initAds } from '../services/ads';
+import { getRemoteValue, initRemoteConfig } from '../services/remoteConfig';
+import { setAIModels, setOpenRouterAPIKey } from '../services/ai';
 import {
   REMOTE_CONFIG_DEFAULTS,
   REMOTE_CONFIG_KEYS,

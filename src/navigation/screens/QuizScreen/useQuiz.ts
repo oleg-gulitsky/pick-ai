@@ -1,8 +1,8 @@
 import { useCallback, useEffect } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { useAppNavigation } from '../..';
-import { tryShowInterstitial } from '../../../modules/ads';
-import { tryGetQuestions, tryGetResult } from '../../../modules/ai';
+import { tryShowInterstitial } from '../../../services/ads';
+import { tryGetQuestions, tryGetResult } from '../../../services/ai';
 import { useHandleServiceError } from '../../../hooks/useHandleServiceError';
 import { useScreenRequest } from '../../../hooks/useScreenRequest';
 

@@ -3,7 +3,7 @@ import {
   REQUEST_TIMEOUT_MS,
   setAIModels,
   setOpenRouterAPIKey,
-} from '../src/modules/ai/openRouterService';
+} from '../src/services/ai/openRouterService';
 
 const okResponse = (content: string) => ({
   ok: true,
