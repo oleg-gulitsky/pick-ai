@@ -16,6 +16,7 @@ function isValidAPIResponse(data: any): data is APIResponse {
 }
 
 const BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
+export const REQUEST_TIMEOUT_MS = 60_000;
 let APIKey = '';
 let AIModels: string[] = [];
 
@@ -27,9 +28,16 @@ export function setOpenRouterAPIKey(newKey: string) {
   APIKey = newKey;
 }
 
+function createAbortError(): Error {
+  const error = new Error('AI request was aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
 async function tryModelRequest(
   model: string,
   content: string,
+  signal: AbortSignal,
 ): Promise<string> {
   try {
     const response = await fetch(BASE_URL, {
@@ -47,6 +55,7 @@ async function tryModelRequest(
           },
         ],
       }),
+      signal,
     });
 
     if (!response.ok) {
@@ -64,27 +73,62 @@ async function tryModelRequest(
       return data.choices[0].message.content;
     }
   } catch (error) {
-    console.warn(error);
+    if (!signal.aborted) {
+      console.warn(error);
+    }
     throw error;
   }
 }
 
-export async function callOpenRouterAPI(content: string): Promise<string> {
+export async function callOpenRouterAPI(
+  content: string,
+  signal?: AbortSignal,
+): Promise<string> {
   if (AIModels.length === 0) {
     throw new Error('No AI models configured');
   }
 
-  const promises = AIModels.map(model => tryModelRequest(model, content));
-
-  try {
-    const result = await Promise.any(promises);
-
-    if (result !== null) {
-      return result;
-    }
-  } catch (error) {
-    console.error('All AI models failed');
+  if (signal?.aborted) {
+    throw createAbortError();
   }
 
-  throw new Error('All AI models failed to provide a valid response');
+  const controller = new AbortController();
+  let isTimedOut = false;
+  const timeoutId = setTimeout(() => {
+    isTimedOut = true;
+    controller.abort();
+  }, REQUEST_TIMEOUT_MS);
+  const abortRequests = () => controller.abort();
+  signal?.addEventListener('abort', abortRequests);
+
+  let result: string;
+
+  try {
+    result = await Promise.any(
+      AIModels.map(model => tryModelRequest(model, content, controller.signal)),
+    );
+  } catch {
+    if (signal?.aborted) {
+      throw createAbortError();
+    }
+
+    if (isTimedOut) {
+      throw new Error(
+        `AI models did not respond within ${REQUEST_TIMEOUT_MS} ms`,
+      );
+    }
+
+    console.error('All AI models failed');
+    throw new Error('All AI models failed to provide a valid response');
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortRequests);
+    controller.abort();
+  }
+
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+
+  return result;
 }
