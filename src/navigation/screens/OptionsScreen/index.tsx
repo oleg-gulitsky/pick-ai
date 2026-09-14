@@ -3,16 +3,14 @@ import { COLORS } from '../../../constants/colors';
 import { STRINGS } from '../../../constants/strings';
 import { Container } from '../../../components/basic/Container';
 import { BasicButton } from '../../../components/basic/BasicButton';
-import { usePendingStore } from '../../../store/usePendingStore';
 import { OptionInput } from './OptionInput';
 import { useOptionsForm } from './useOptionsForm';
 
 export function OptionsScreen() {
-  const isPending = usePendingStore.use.isPending();
   const {
     firstOption,
     secondOption,
-    isValid,
+    canSubmit,
     handleFirstOptionChange,
     handleSecondOptionChange,
     handleSubmit,
@@ -34,7 +32,7 @@ export function OptionsScreen() {
       />
       <View style={styles.bottomSection}>
         <BasicButton
-          disabled={!isValid || isPending}
+          disabled={!canSubmit}
           onPress={handleSubmit}
           title={STRINGS.GENERATE_QUESTIONS_BUTTON_TITLE}
         />
