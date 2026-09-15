@@ -1,15 +1,13 @@
 import { ReactNode } from 'react';
 import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
-import { usePendingStore } from '../../store/usePendingStore';
 
 interface ContainerProps {
   children: ReactNode;
+  isPending?: boolean;
 }
 
-export function Container({ children }: ContainerProps) {
-  const isPending = usePendingStore.use.isPending();
-
+export function Container({ children, isPending = false }: ContainerProps) {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor={COLORS.LICORICE} />

@@ -5,10 +5,10 @@ import { COLORS } from '../../../constants/colors';
 import { useQuiz } from './useQuiz';
 
 export function QuizScreen() {
-  const { handleOptionPress, question } = useQuiz();
+  const { handleOptionPress, question, isPending } = useQuiz();
 
   return (
-    <Container>
+    <Container isPending={isPending}>
       {question ? (
         <>
           <ScrollView style={styles.scrollView}>

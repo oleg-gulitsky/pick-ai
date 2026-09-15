@@ -5,6 +5,7 @@ import { tryGetQuestions, tryGetResult } from '../src/services/ai';
 import { useQuiz } from '../src/navigation/screens/QuizScreen/useQuiz';
 import { usePendingStore } from '../src/store/usePendingStore';
 import { useQuizStore } from '../src/store/useQuizStore';
+import { useHistoryStore } from '../src/store/useHistoryStore';
 
 const mockNavigation = { replace: jest.fn() };
 const mockHandleServiceError = jest.fn();
@@ -77,6 +78,7 @@ describe('useQuiz', () => {
     useQuizStore.getState().resetQuiz();
     useQuizStore.getState().setOptions('Tea', 'Coffee');
     usePendingStore.getState().setIsPendingFalse();
+    useHistoryStore.setState({ entries: [] });
   });
 
   afterEach(unmount);
@@ -123,6 +125,15 @@ describe('useQuiz', () => {
       expect.anything(),
     );
     expect(useQuizStore.getState().result).toBe('Pick tea');
+    expect(useHistoryStore.getState().entries).toEqual([
+      expect.objectContaining({
+        firstOption: 'Tea',
+        secondOption: 'Coffee',
+        questions,
+        answers: [0, 1],
+        result: 'Pick tea',
+      }),
+    ]);
     expect(mockNavigation.replace).toHaveBeenCalledWith('Result');
     expect(isPending()).toBe(false);
   });
@@ -166,6 +177,7 @@ describe('useQuiz', () => {
     });
 
     expect(useQuizStore.getState().result).toBe('');
+    expect(useHistoryStore.getState().entries).toEqual([]);
     expect(mockNavigation.replace).not.toHaveBeenCalled();
   });
 });

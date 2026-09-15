@@ -1,5 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
+import { useHistoryStore } from '../../../store/useHistoryStore';
+import { usePendingStore } from '../../../store/usePendingStore';
 import { useAppNavigation } from '../..';
 import { tryShowInterstitial } from '../../../services/ads';
 import { tryGetQuestions, tryGetResult } from '../../../services/ai';
@@ -18,6 +20,8 @@ export function useQuiz() {
   const setQuestions = useQuizStore.use.setQuestions();
   const setResult = useQuizStore.use.setResult();
   const resetQuiz = useQuizStore.use.resetQuiz();
+  const addHistoryEntry = useHistoryStore.use.addEntry();
+  const isPending = usePendingStore.use.isPending();
 
   const failQuiz = useCallback(() => {
     resetQuiz();
@@ -57,6 +61,13 @@ export function useQuiz() {
         tryGetResult([firstOption, secondOption], questions, answers, signal),
       res => {
         setResult(res);
+        addHistoryEntry({
+          firstOption,
+          secondOption,
+          questions,
+          answers,
+          result: res,
+        });
         navigation.replace('Result');
       },
       failQuiz,
@@ -66,5 +77,6 @@ export function useQuiz() {
   return {
     handleOptionPress,
     question,
+    isPending,
   };
 }
