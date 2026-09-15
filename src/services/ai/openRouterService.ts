@@ -32,9 +32,11 @@ function isValidAPIResponse(data: any): data is APIResponse {
 
 const API_URL = 'https://openrouter.ai/api/v1';
 export const REQUEST_TIMEOUT_MS = 60_000;
+export const DETECTION_TIMEOUT_MS = 5_000;
 let APIKey = '';
 let AIModels: string[] = [];
 const structuredOutputModels = new Set<string>();
+let structuredOutputDetection: Promise<void> = Promise.resolve();
 
 export function setAIModels(models: string[]) {
   AIModels = models;
@@ -45,8 +47,13 @@ export function setOpenRouterAPIKey(newKey: string) {
 }
 
 async function supportsStructuredOutputs(model: string): Promise<boolean> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DETECTION_TIMEOUT_MS);
+
   try {
-    const response = await fetch(`${API_URL}/models/${model}/endpoints`);
+    const response = await fetch(`${API_URL}/models/${model}/endpoints`, {
+      signal: controller.signal,
+    });
 
     if (!response.ok) {
       return false;
@@ -66,13 +73,13 @@ async function supportsStructuredOutputs(model: string): Promise<boolean> {
   } catch (error) {
     console.warn(error);
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
-export async function detectStructuredOutputSupport(
-  models: string[],
-): Promise<void> {
-  await Promise.all(
+export function detectStructuredOutputSupport(models: string[]): Promise<void> {
+  structuredOutputDetection = Promise.all(
     models.map(async model => {
       if (await supportsStructuredOutputs(model)) {
         structuredOutputModels.add(model);
@@ -80,7 +87,24 @@ export async function detectStructuredOutputSupport(
         structuredOutputModels.delete(model);
       }
     }),
-  );
+  ).then(() => undefined);
+
+  return structuredOutputDetection;
+}
+
+function waitForStructuredOutputDetection(signal?: AbortSignal): Promise<void> {
+  if (!signal) {
+    return structuredOutputDetection;
+  }
+
+  return new Promise(resolve => {
+    const finish = () => {
+      signal.removeEventListener('abort', finish);
+      resolve();
+    };
+    signal.addEventListener('abort', finish);
+    structuredOutputDetection.then(finish);
+  });
 }
 
 function createAbortError(): Error {
@@ -161,6 +185,14 @@ export async function callOpenRouterAPI<T>(
 
   if (AIModels.length === 0) {
     throw new Error('No AI models configured');
+  }
+
+  if (!APIKey) {
+    throw new Error('No OpenRouter API key configured');
+  }
+
+  if (options.responseFormat) {
+    await waitForStructuredOutputDetection(signal);
   }
 
   if (signal?.aborted) {

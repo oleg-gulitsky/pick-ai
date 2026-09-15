@@ -1,11 +1,27 @@
 import {
-  callOpenRouterAPI,
-  detectStructuredOutputSupport,
+  DETECTION_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS,
   ResponseFormat,
-  setAIModels,
-  setOpenRouterAPIKey,
 } from '../src/services/ai/openRouterService';
+
+type OpenRouterService = typeof import('../src/services/ai/openRouterService');
+
+// The service keeps its config in module state, so every test gets a fresh copy.
+let callOpenRouterAPI: OpenRouterService['callOpenRouterAPI'];
+let detectStructuredOutputSupport: OpenRouterService['detectStructuredOutputSupport'];
+let setAIModels: OpenRouterService['setAIModels'];
+let setOpenRouterAPIKey: OpenRouterService['setOpenRouterAPIKey'];
+
+function loadFreshService() {
+  jest.isolateModules(() => {
+    ({
+      callOpenRouterAPI,
+      detectStructuredOutputSupport,
+      setAIModels,
+      setOpenRouterAPIKey,
+    } = require('../src/services/ai/openRouterService'));
+  });
+}
 
 const okResponse = (content: string) => ({
   ok: true,
@@ -65,6 +81,8 @@ function hangUntilAborted(init: RequestInit): Promise<never> {
   });
 }
 
+const flushPromises = () => new Promise(resolve => setImmediate(resolve));
+
 function requestSignals(): AbortSignal[] {
   return fetchMock.mock.calls.map(([, init]) => init.signal);
 }
@@ -73,6 +91,7 @@ describe('callOpenRouterAPI', () => {
   beforeEach(() => {
     fetchMock.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;
+    loadFreshService();
     setOpenRouterAPIKey('test-key');
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -89,6 +108,16 @@ describe('callOpenRouterAPI', () => {
     await expect(
       callOpenRouterAPI('prompt', { parse: parseText }),
     ).rejects.toThrow('No AI models configured');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('throws when the API key is missing', async () => {
+    setAIModels(['model']);
+    setOpenRouterAPIKey('');
+
+    await expect(
+      callOpenRouterAPI('prompt', { parse: parseText }),
+    ).rejects.toThrow('No OpenRouter API key configured');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -309,6 +338,76 @@ describe('callOpenRouterAPI', () => {
       expect(completionBodies()['capable-model']).not.toHaveProperty(
         'response_format',
       );
+    });
+
+    test('waits for a pending support check before asking for a schema', async () => {
+      let resolveEndpoints!: () => void;
+      fetchMock.mockImplementation((url: string) =>
+        url.endsWith('/endpoints')
+          ? new Promise(resolve => {
+              resolveEndpoints = () =>
+                resolve(endpointsResponse(['structured_outputs']));
+            })
+          : Promise.resolve(okResponse('answer')),
+      );
+      setAIModels(['capable-model']);
+
+      const detection = detectStructuredOutputSupport(['capable-model']);
+      const request = callOpenRouterAPI('prompt', {
+        parse: parseText,
+        responseFormat,
+      });
+      await flushPromises();
+      expect(completionBodies()).toEqual({});
+
+      resolveEndpoints();
+      await detection;
+      await request;
+
+      expect(completionBodies()['capable-model']).toMatchObject({
+        response_format: responseFormat,
+      });
+    });
+
+    test('treats a hanging support check as unsupported', async () => {
+      jest.useFakeTimers();
+      fetchMock.mockImplementation(async (url: string, init: RequestInit) =>
+        url.endsWith('/endpoints')
+          ? hangUntilAborted(init ?? {})
+          : okResponse('answer'),
+      );
+      setAIModels(['slow-model']);
+
+      const detection = detectStructuredOutputSupport(['slow-model']);
+      jest.advanceTimersByTime(DETECTION_TIMEOUT_MS);
+      await detection;
+      await callOpenRouterAPI('prompt', { parse: parseText, responseFormat });
+
+      expect(completionBodies()['slow-model']).not.toHaveProperty(
+        'response_format',
+      );
+    });
+
+    test('stops waiting for the support check when the caller aborts', async () => {
+      jest.useFakeTimers();
+      fetchMock.mockImplementation(async (url: string, init: RequestInit) =>
+        url.endsWith('/endpoints')
+          ? hangUntilAborted(init ?? {})
+          : okResponse('answer'),
+      );
+      setAIModels(['slow-model']);
+      detectStructuredOutputSupport(['slow-model']);
+      const controller = new AbortController();
+
+      const request = callOpenRouterAPI('prompt', {
+        parse: parseText,
+        responseFormat,
+        signal: controller.signal,
+      });
+      controller.abort();
+
+      await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+      expect(completionBodies()).toEqual({});
     });
   });
 });
