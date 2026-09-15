@@ -2,8 +2,13 @@ import remoteConfig, {
   FirebaseRemoteConfigTypes,
 } from '@react-native-firebase/remote-config';
 
+const DEV_FETCH_INTERVAL_MS = 0;
+const PROD_FETCH_INTERVAL_MS = 10 * 60 * 1000;
+
 export const DEFAULT_REMOTE_CONFIG_SETTINGS = {
-  minimumFetchIntervalMillis: 300,
+  minimumFetchIntervalMillis: __DEV__
+    ? DEV_FETCH_INTERVAL_MS
+    : PROD_FETCH_INTERVAL_MS,
 };
 
 type initRemoteConfigParams = {
@@ -25,11 +30,11 @@ export async function initRemoteConfig({
 
     const fetchedRemotely = await remoteConfig().fetchAndActivate();
 
-    if (fetchedRemotely && __DEV__) {
-      console.log('Configs were retrieved from the backend and activated.');
-    } else {
+    if (__DEV__) {
       console.log(
-        'No configs were fetched from the backend, and the local configs were already activated',
+        fetchedRemotely
+          ? 'Configs were retrieved from the backend and activated.'
+          : 'No configs were fetched from the backend, and the local configs were already activated',
       );
     }
   } catch (error) {
