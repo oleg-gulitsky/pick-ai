@@ -35,37 +35,58 @@ export function initAds({
 }
 
 export function tryShowInterstitial(placement?: string): Promise<boolean> {
-  return new Promise(resolve => {
-    if (Appodeal.canShow(AppodealAdType.INTERSTITIAL)) {
-      const handler = () => {
-        resolve(true);
-        Appodeal.removeEventListener(
-          AppodealInterstitialEvents.CLOSED,
-          handler,
-        );
-      };
-      Appodeal.addEventListener(AppodealInterstitialEvents.CLOSED, handler);
-      Appodeal.show(AppodealAdType.INTERSTITIAL, placement);
-    } else {
-      resolve(false);
-    }
+  return showAdAndWait({
+    adType: AppodealAdType.INTERSTITIAL,
+    closedEvent: AppodealInterstitialEvents.CLOSED,
+    failedToShowEvent: AppodealInterstitialEvents.FAILED_TO_SHOW,
+    placement,
+    getClosedResult: () => true,
   });
 }
 
 export function tryShowRewarded(placement?: string): Promise<boolean> {
+  return showAdAndWait({
+    adType: AppodealAdType.REWARDED_VIDEO,
+    closedEvent: AppodealRewardedEvents.CLOSED,
+    failedToShowEvent: AppodealRewardedEvents.FAILED_TO_SHOW,
+    placement,
+    getClosedResult: event => Boolean(event?.isFinished),
+  });
+}
+
+type showAdAndWaitParams = {
+  adType: AppodealAdType;
+  closedEvent: string;
+  failedToShowEvent: string;
+  placement?: string;
+  getClosedResult: (event?: any) => boolean;
+};
+
+function showAdAndWait({
+  adType,
+  closedEvent,
+  failedToShowEvent,
+  placement,
+  getClosedResult,
+}: showAdAndWaitParams): Promise<boolean> {
   return new Promise(resolve => {
-    if (Appodeal.canShow(AppodealAdType.REWARDED_VIDEO)) {
-      const handler = (event: any) => {
-        if (event.isFinished) {
-          resolve(true);
-        }
-        Appodeal.removeEventListener(AppodealRewardedEvents.CLOSED, handler);
-      };
-      Appodeal.addEventListener(AppodealRewardedEvents.CLOSED, handler);
-      Appodeal.show(AppodealAdType.REWARDED_VIDEO, placement);
-    } else {
+    if (!Appodeal.canShow(adType)) {
       resolve(false);
+      return;
     }
+
+    const settle = (result: boolean) => {
+      Appodeal.removeEventListener(closedEvent, handleClosed);
+      Appodeal.removeEventListener(failedToShowEvent, handleFailedToShow);
+      resolve(result);
+    };
+
+    const handleClosed = (event?: any) => settle(getClosedResult(event));
+    const handleFailedToShow = () => settle(false);
+
+    Appodeal.addEventListener(closedEvent, handleClosed);
+    Appodeal.addEventListener(failedToShowEvent, handleFailedToShow);
+    Appodeal.show(adType, placement);
   });
 }
 
