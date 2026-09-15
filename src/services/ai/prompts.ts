@@ -1,32 +1,39 @@
-import { Question } from '../../appTypes/Question';
+import {
+  MAX_OPTIONS,
+  MAX_QUESTIONS,
+  MIN_OPTIONS,
+  Question,
+} from '../../appTypes/Question';
+
+const REQUESTED_MIN_QUESTIONS = 7;
 
 export function buildQuestionsPrompt(first: string, second: string): string {
   return `You are helping someone choose between "${first}" and "${second}".
 
-Create 7 to 10 questions to help make this decision. Each question can have 2 to 4 answer options.
+Create ${REQUESTED_MIN_QUESTIONS} to ${MAX_QUESTIONS} questions to help make this decision. Each question can have ${MIN_OPTIONS} to ${MAX_OPTIONS} answer options.
 
-REQUIRED FORMAT - Return ONLY a JSON array, nothing else:
-[{"question":"text here","options":["option 1","option 2"]},{"question":"text here","options":["option 1","option 2","option 3"]}]
+REQUIRED FORMAT - Return ONLY a JSON object with a "questions" array, nothing else:
+{"questions":[{"question":"text here","options":["option 1","option 2"]},{"question":"text here","options":["option 1","option 2","option 3"]}]}
 
 EXAMPLE:
-[{"question":"What is your budget?","options":["Very limited","Limited","Moderate","Flexible"]},{"question":"How much time do you have?","options":["Very little time","Plenty of time"]}]
+{"questions":[{"question":"What is your budget?","options":["Very limited","Limited","Moderate","Flexible"]},{"question":"How much time do you have?","options":["Very little time","Plenty of time"]}]}
 
 RULES:
-- Return ONLY the JSON array
+- Return ONLY the JSON object
 - No markdown, no code blocks, no explanations
-- Create 7 to 10 questions
-- Each question must have 2 to 4 options
+- Create ${REQUESTED_MIN_QUESTIONS} to ${MAX_QUESTIONS} questions
+- Each question must have ${MIN_OPTIONS} to ${MAX_OPTIONS} options
 - Each question must be clear and simple
 - Options should be short (2-5 words)
 - Must be valid JSON that works with JSON.parse()
 
-Now create 7-10 questions for choosing between "${first}" and "${second}":`;
+Now create ${REQUESTED_MIN_QUESTIONS}-${MAX_QUESTIONS} questions for choosing between "${first}" and "${second}":`;
 }
 
 export function buildResultPrompt(
   options: string[],
   questions: Question[],
-  answers: number[]
+  answers: number[],
 ): string {
   const optionsText = options.reduce((prev, cur) => `"${prev}" and "${cur}"`);
   const answersText = questions

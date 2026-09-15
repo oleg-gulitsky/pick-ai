@@ -1,15 +1,13 @@
+import { MIN_QUESTIONS } from '../src/appTypes/Question';
 import {
   formatQuestionsResponse,
   formatResultResponse,
 } from '../src/services/ai/responseFormatter';
 
-const questions = [
-  { question: 'What is your budget?', options: ['Low', 'High'] },
-  {
-    question: 'How much time do you have?',
-    options: ['Little', 'Some', 'Plenty'],
-  },
-];
+const questions = Array.from({ length: MIN_QUESTIONS }, (_, i) => ({
+  question: `Question ${i + 1}?`,
+  options: ['Low', 'Some', 'Plenty'],
+}));
 const json = JSON.stringify(questions);
 
 describe('formatQuestionsResponse', () => {
@@ -23,6 +21,12 @@ describe('formatQuestionsResponse', () => {
 
   test('parses a bare JSON array', () => {
     expect(formatQuestionsResponse(json)).toEqual(questions);
+  });
+
+  test('parses questions wrapped in an object', () => {
+    expect(formatQuestionsResponse(JSON.stringify({ questions }))).toEqual(
+      questions,
+    );
   });
 
   test('parses a ```json fenced block', () => {
@@ -51,18 +55,51 @@ describe('formatQuestionsResponse', () => {
     expect(formatQuestionsResponse('{"question":"Q","options":[]}')).toBeNull();
   });
 
+  test('returns null for an empty array', () => {
+    expect(formatQuestionsResponse('[]')).toBeNull();
+  });
+
+  test('returns null for a wrapper without valid questions', () => {
+    expect(formatQuestionsResponse('{"questions":[]}')).toBeNull();
+  });
+
   test('returns null for a plain-text answer', () => {
     expect(
       formatQuestionsResponse('Sorry, I cannot help with that.'),
     ).toBeNull();
   });
 
-  // Known bug, see IMPROVEMENTS.md 2.4. Switch to `test` once fixed.
-  test.failing('keeps escaped quotes inside string values', () => {
-    const withQuotes = [{ question: 'Is it "cheap"?', options: ['Yes', 'No'] }];
+  test('parses a fenced block without a language tag', () => {
+    expect(formatQuestionsResponse('\n```\n' + json + '\n```\n')).toEqual(
+      questions,
+    );
+  });
+
+  test('keeps escaped quotes inside string values', () => {
+    const withQuotes = [
+      { question: 'Is it "cheap"?', options: ['Yes', 'No'] },
+      ...questions.slice(1),
+    ];
     expect(formatQuestionsResponse(JSON.stringify(withQuotes))).toEqual(
       withQuotes,
     );
+  });
+
+  test('keeps escaped line breaks inside string values', () => {
+    const withLineBreak = [
+      { question: 'First line\nSecond line', options: ['Yes', 'No'] },
+      ...questions.slice(1),
+    ];
+    expect(
+      formatQuestionsResponse(
+        '```json\n' + JSON.stringify(withLineBreak) + '\n```',
+      ),
+    ).toEqual(withLineBreak);
+  });
+
+  test('decodes unicode escapes inside string values', () => {
+    const escaped = json.replace('Question 1?', 'Caf\\u00e9?');
+    expect(formatQuestionsResponse(escaped)?.[0].question).toBe('Café?');
   });
 });
 
@@ -71,5 +108,9 @@ describe('formatResultResponse', () => {
     expect(formatResultResponse('\n  Pick the first one.  \n')).toBe(
       'Pick the first one.',
     );
+  });
+
+  test('returns null for a blank answer', () => {
+    expect(formatResultResponse(' \n ')).toBeNull();
   });
 });

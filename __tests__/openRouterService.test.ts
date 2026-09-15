@@ -1,6 +1,8 @@
 import {
   callOpenRouterAPI,
+  detectStructuredOutputSupport,
   REQUEST_TIMEOUT_MS,
+  ResponseFormat,
   setAIModels,
   setOpenRouterAPIKey,
 } from '../src/services/ai/openRouterService';
@@ -23,10 +25,36 @@ const invalidFormatResponse = () => ({
   json: async () => ({ choices: [] }),
 });
 
+const endpointsResponse = (supportedParameters: string[]) => ({
+  ok: true,
+  status: 200,
+  json: async () => ({
+    data: { endpoints: [{ supported_parameters: supportedParameters }] },
+  }),
+});
+
+const responseFormat: ResponseFormat = {
+  type: 'json_schema',
+  json_schema: { name: 'test', strict: true, schema: { type: 'object' } },
+};
+
+const parseText = (content: string) => content;
+
 const fetchMock = jest.fn();
 
 function requestedModel(init: RequestInit): string {
   return JSON.parse(String(init.body)).model;
+}
+
+function completionBodies(): Record<string, any> {
+  return Object.fromEntries(
+    fetchMock.mock.calls
+      .filter(([url]) => String(url).endsWith('/chat/completions'))
+      .map(([, init]) => {
+        const body = JSON.parse(String(init.body));
+        return [body.model, body];
+      }),
+  );
 }
 
 function hangUntilAborted(init: RequestInit): Promise<never> {
@@ -58,9 +86,9 @@ describe('callOpenRouterAPI', () => {
   test('throws when the model pool is empty', async () => {
     setAIModels([]);
 
-    await expect(callOpenRouterAPI('prompt')).rejects.toThrow(
-      'No AI models configured',
-    );
+    await expect(
+      callOpenRouterAPI('prompt', { parse: parseText }),
+    ).rejects.toThrow('No AI models configured');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -68,7 +96,7 @@ describe('callOpenRouterAPI', () => {
     setAIModels(['model-a', 'model-b']);
     fetchMock.mockImplementation(async () => okResponse('answer'));
 
-    await callOpenRouterAPI('prompt');
+    await callOpenRouterAPI('prompt', { parse: parseText });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const inits: RequestInit[] = fetchMock.mock.calls.map(([, init]) => init);
@@ -89,9 +117,33 @@ describe('callOpenRouterAPI', () => {
         : okResponse('answer from working'),
     );
 
-    await expect(callOpenRouterAPI('prompt')).resolves.toBe(
-      'answer from working',
+    await expect(
+      callOpenRouterAPI('prompt', { parse: parseText }),
+    ).resolves.toBe('answer from working');
+  });
+
+  test('moves on to another model when an answer fails validation', async () => {
+    setAIModels(['invalid', 'valid']);
+    fetchMock.mockImplementation(async (_url, init: RequestInit) =>
+      okResponse(
+        requestedModel(init) === 'invalid' ? 'bad answer' : 'good answer',
+      ),
     );
+    const parse = (content: string) =>
+      content === 'good answer' ? content : null;
+
+    await expect(callOpenRouterAPI('prompt', { parse })).resolves.toBe(
+      'good answer',
+    );
+  });
+
+  test('throws when no answer passes validation', async () => {
+    setAIModels(['model-a', 'model-b']);
+    fetchMock.mockImplementation(async () => okResponse('answer'));
+
+    await expect(
+      callOpenRouterAPI('prompt', { parse: () => null }),
+    ).rejects.toThrow('All AI models failed to provide a valid response');
   });
 
   test('throws when every model fails', async () => {
@@ -107,9 +159,9 @@ describe('callOpenRouterAPI', () => {
       }
     });
 
-    await expect(callOpenRouterAPI('prompt')).rejects.toThrow(
-      'All AI models failed to provide a valid response',
-    );
+    await expect(
+      callOpenRouterAPI('prompt', { parse: parseText }),
+    ).rejects.toThrow('All AI models failed to provide a valid response');
   });
 
   test('cancels the remaining requests once one model answers', async () => {
@@ -120,7 +172,9 @@ describe('callOpenRouterAPI', () => {
         : hangUntilAborted(init),
     );
 
-    await expect(callOpenRouterAPI('prompt')).resolves.toBe('fast answer');
+    await expect(
+      callOpenRouterAPI('prompt', { parse: parseText }),
+    ).resolves.toBe('fast answer');
     expect(requestSignals().every(signal => signal.aborted)).toBe(true);
   });
 
@@ -129,7 +183,7 @@ describe('callOpenRouterAPI', () => {
     setAIModels(['model']);
     fetchMock.mockImplementation(async () => okResponse('answer'));
 
-    await callOpenRouterAPI('prompt');
+    await callOpenRouterAPI('prompt', { parse: parseText });
 
     expect(jest.getTimerCount()).toBe(0);
   });
@@ -141,7 +195,7 @@ describe('callOpenRouterAPI', () => {
       hangUntilAborted(init),
     );
 
-    const request = callOpenRouterAPI('prompt');
+    const request = callOpenRouterAPI('prompt', { parse: parseText });
     jest.advanceTimersByTime(REQUEST_TIMEOUT_MS - 1);
     expect(requestSignals().some(signal => signal.aborted)).toBe(false);
     jest.advanceTimersByTime(1);
@@ -159,7 +213,10 @@ describe('callOpenRouterAPI', () => {
     );
     const controller = new AbortController();
 
-    const request = callOpenRouterAPI('prompt', controller.signal);
+    const request = callOpenRouterAPI('prompt', {
+      parse: parseText,
+      signal: controller.signal,
+    });
     controller.abort();
 
     await expect(request).rejects.toMatchObject({ name: 'AbortError' });
@@ -171,7 +228,10 @@ describe('callOpenRouterAPI', () => {
     fetchMock.mockImplementation(async () => okResponse('late answer'));
     const controller = new AbortController();
 
-    const request = callOpenRouterAPI('prompt', controller.signal);
+    const request = callOpenRouterAPI('prompt', {
+      parse: parseText,
+      signal: controller.signal,
+    });
     controller.abort();
 
     await expect(request).rejects.toMatchObject({ name: 'AbortError' });
@@ -183,8 +243,72 @@ describe('callOpenRouterAPI', () => {
     controller.abort();
 
     await expect(
-      callOpenRouterAPI('prompt', controller.signal),
+      callOpenRouterAPI('prompt', {
+        parse: parseText,
+        signal: controller.signal,
+      }),
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe('structured outputs', () => {
+    test('asks for the schema only from models that support it', async () => {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url.endsWith('/models/schema-model/endpoints')) {
+          return endpointsResponse(['response_format', 'structured_outputs']);
+        }
+        if (url.endsWith('/endpoints')) {
+          return endpointsResponse(['temperature']);
+        }
+        return okResponse('answer');
+      });
+
+      await detectStructuredOutputSupport(['schema-model', 'plain-model']);
+      setAIModels(['schema-model', 'plain-model']);
+      await callOpenRouterAPI('prompt', { parse: parseText, responseFormat });
+
+      const bodies = completionBodies();
+      expect(bodies['schema-model']).toMatchObject({
+        response_format: responseFormat,
+        provider: { require_parameters: true },
+      });
+      expect(bodies['plain-model']).not.toHaveProperty('response_format');
+      expect(bodies['plain-model']).not.toHaveProperty('provider');
+    });
+
+    test('falls back to the prompt when the support check fails', async () => {
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url.endsWith('/endpoints')) {
+          throw new TypeError('Network request failed');
+        }
+        return okResponse('answer');
+      });
+
+      await expect(
+        detectStructuredOutputSupport(['unchecked-model']),
+      ).resolves.toBeUndefined();
+      setAIModels(['unchecked-model']);
+      await callOpenRouterAPI('prompt', { parse: parseText, responseFormat });
+
+      expect(completionBodies()['unchecked-model']).not.toHaveProperty(
+        'response_format',
+      );
+    });
+
+    test('sends no schema when the caller does not ask for one', async () => {
+      fetchMock.mockImplementation(async (url: string) =>
+        url.endsWith('/endpoints')
+          ? endpointsResponse(['structured_outputs'])
+          : okResponse('answer'),
+      );
+
+      await detectStructuredOutputSupport(['capable-model']);
+      setAIModels(['capable-model']);
+      await callOpenRouterAPI('prompt', { parse: parseText });
+
+      expect(completionBodies()['capable-model']).not.toHaveProperty(
+        'response_format',
+      );
+    });
   });
 });

@@ -1,7 +1,11 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
 import { useAppInit } from '../src/hooks/useAppInit';
 import { getRemoteValue, initRemoteConfig } from '../src/services/remoteConfig';
-import { setAIModels, setOpenRouterAPIKey } from '../src/services/ai';
+import {
+  detectStructuredOutputSupport,
+  setAIModels,
+  setOpenRouterAPIKey,
+} from '../src/services/ai';
 import { useAppConfigStore } from '../src/store/useAppConfigStore';
 
 jest.mock('react-native-config', () => ({}));
@@ -13,6 +17,7 @@ jest.mock('../src/services/remoteConfig', () => ({
   getRemoteValue: jest.fn(),
 }));
 jest.mock('../src/services/ai', () => ({
+  detectStructuredOutputSupport: jest.fn(),
   setAIModels: jest.fn(),
   setOpenRouterAPIKey: jest.fn(),
 }));
@@ -78,6 +83,24 @@ describe('useAppInit', () => {
     expect(isConfigReady()).toBe(true);
   });
 
+  test('checks structured outputs support without blocking the UI', async () => {
+    jest
+      .mocked(detectStructuredOutputSupport)
+      .mockReturnValue(new Promise(() => {}));
+    mockedInitRemoteConfig.mockResolvedValue();
+
+    await act(async () => {
+      renderer = TestRenderer.create(<Probe />);
+      await flushPromises();
+    });
+
+    expect(detectStructuredOutputSupport).toHaveBeenCalledWith([
+      'model-a',
+      'model-b',
+    ]);
+    expect(isConfigReady()).toBe(true);
+  });
+
   test('still unlocks the UI when the models value is not valid JSON', async () => {
     mockedInitRemoteConfig.mockResolvedValue();
     mockedGetRemoteValue.mockImplementation(key =>
@@ -90,6 +113,7 @@ describe('useAppInit', () => {
     });
 
     expect(setAIModels).not.toHaveBeenCalled();
+    expect(detectStructuredOutputSupport).not.toHaveBeenCalled();
     expect(isConfigReady()).toBe(true);
   });
 });

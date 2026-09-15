@@ -5,17 +5,25 @@ import {
   formatResultResponse,
 } from './responseFormatter';
 import { callOpenRouterAPI } from './openRouterService';
+import { QUESTIONS_RESPONSE_FORMAT } from './schemas';
 
-export { setAIModels, setOpenRouterAPIKey } from './openRouterService';
+export {
+  detectStructuredOutputSupport,
+  setAIModels,
+  setOpenRouterAPIKey,
+} from './openRouterService';
 
 export async function tryGetQuestions(
   first: string,
   second: string,
   signal?: AbortSignal,
-): Promise<Question[] | null> {
+): Promise<Question[]> {
   const prompt = buildQuestionsPrompt(first, second);
-  const response = await callOpenRouterAPI(prompt, signal);
-  return formatQuestionsResponse(response);
+  return callOpenRouterAPI(prompt, {
+    parse: formatQuestionsResponse,
+    responseFormat: QUESTIONS_RESPONSE_FORMAT,
+    signal,
+  });
 }
 
 export async function tryGetResult(
@@ -25,6 +33,5 @@ export async function tryGetResult(
   signal?: AbortSignal,
 ): Promise<string> {
   const prompt = buildResultPrompt(options, questions, answers);
-  const response = await callOpenRouterAPI(prompt, signal);
-  return formatResultResponse(response);
+  return callOpenRouterAPI(prompt, { parse: formatResultResponse, signal });
 }

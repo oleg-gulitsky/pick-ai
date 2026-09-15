@@ -6,6 +6,21 @@ interface APIResponse {
   }>;
 }
 
+export type ResponseFormat = {
+  type: 'json_schema';
+  json_schema: {
+    name: string;
+    strict: boolean;
+    schema: Record<string, unknown>;
+  };
+};
+
+type CallOptions<T> = {
+  parse: (content: string) => T | null;
+  responseFormat?: ResponseFormat;
+  signal?: AbortSignal;
+};
+
 function isValidAPIResponse(data: any): data is APIResponse {
   return (
     data &&
@@ -15,10 +30,11 @@ function isValidAPIResponse(data: any): data is APIResponse {
   );
 }
 
-const BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const API_URL = 'https://openrouter.ai/api/v1';
 export const REQUEST_TIMEOUT_MS = 60_000;
 let APIKey = '';
 let AIModels: string[] = [];
+const structuredOutputModels = new Set<string>();
 
 export function setAIModels(models: string[]) {
   AIModels = models;
@@ -28,19 +44,62 @@ export function setOpenRouterAPIKey(newKey: string) {
   APIKey = newKey;
 }
 
+async function supportsStructuredOutputs(model: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/models/${model}/endpoints`);
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+    const endpoints = data?.data?.endpoints;
+
+    return (
+      Array.isArray(endpoints) &&
+      endpoints.some(
+        (endpoint: any) =>
+          Array.isArray(endpoint?.supported_parameters) &&
+          endpoint.supported_parameters.includes('structured_outputs'),
+      )
+    );
+  } catch (error) {
+    console.warn(error);
+    return false;
+  }
+}
+
+export async function detectStructuredOutputSupport(
+  models: string[],
+): Promise<void> {
+  await Promise.all(
+    models.map(async model => {
+      if (await supportsStructuredOutputs(model)) {
+        structuredOutputModels.add(model);
+      } else {
+        structuredOutputModels.delete(model);
+      }
+    }),
+  );
+}
+
 function createAbortError(): Error {
   const error = new Error('AI request was aborted');
   error.name = 'AbortError';
   return error;
 }
 
-async function tryModelRequest(
+async function tryModelRequest<T>(
   model: string,
   content: string,
+  { parse, responseFormat }: CallOptions<T>,
   signal: AbortSignal,
-): Promise<string> {
+): Promise<T> {
+  const useStructuredOutputs =
+    responseFormat !== undefined && structuredOutputModels.has(model);
+
   try {
-    const response = await fetch(BASE_URL, {
+    const response = await fetch(`${API_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${APIKey}`,
@@ -54,6 +113,12 @@ async function tryModelRequest(
             content,
           },
         ],
+        ...(useStructuredOutputs
+          ? {
+              response_format: responseFormat,
+              provider: { require_parameters: true },
+            }
+          : {}),
       }),
       signal,
     });
@@ -70,7 +135,15 @@ async function tryModelRequest(
         throw new Error(`Model ${model} returned invalid response format`);
       }
 
-      return data.choices[0].message.content;
+      const result = parse(data.choices[0].message.content);
+
+      if (result === null) {
+        throw new Error(
+          `Model ${model} returned a response that failed validation`,
+        );
+      }
+
+      return result;
     }
   } catch (error) {
     if (!signal.aborted) {
@@ -80,10 +153,12 @@ async function tryModelRequest(
   }
 }
 
-export async function callOpenRouterAPI(
+export async function callOpenRouterAPI<T>(
   content: string,
-  signal?: AbortSignal,
-): Promise<string> {
+  options: CallOptions<T>,
+): Promise<T> {
+  const { signal } = options;
+
   if (AIModels.length === 0) {
     throw new Error('No AI models configured');
   }
@@ -101,11 +176,13 @@ export async function callOpenRouterAPI(
   const abortRequests = () => controller.abort();
   signal?.addEventListener('abort', abortRequests);
 
-  let result: string;
+  let result: T;
 
   try {
     result = await Promise.any(
-      AIModels.map(model => tryModelRequest(model, content, controller.signal)),
+      AIModels.map(model =>
+        tryModelRequest(model, content, options, controller.signal),
+      ),
     );
   } catch {
     if (signal?.aborted) {

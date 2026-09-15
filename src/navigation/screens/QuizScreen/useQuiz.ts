@@ -29,13 +29,7 @@ export function useQuiz() {
 
     runRequest(
       signal => tryGetQuestions(firstOption, secondOption, signal),
-      res => {
-        if (res) {
-          setQuestions(res);
-        } else {
-          failQuiz();
-        }
-      },
+      setQuestions,
       failQuiz,
     );
   }, [

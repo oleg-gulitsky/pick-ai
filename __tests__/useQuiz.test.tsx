@@ -92,24 +92,18 @@ describe('useQuiz', () => {
     expect(isPending()).toBe(false);
   });
 
-  test.each([
-    ['fails', () => mockedTryGetQuestions.mockRejectedValue(new Error())],
-    ['returns nothing', () => mockedTryGetQuestions.mockResolvedValue(null)],
-  ])(
-    'leaves the quiz without retrying when the questions request %s',
-    async (_case, arrange) => {
-      arrange();
+  test('leaves the quiz without retrying when the questions request fails', async () => {
+    mockedTryGetQuestions.mockRejectedValue(new Error());
 
-      await mount();
-      await rerender();
+    await mount();
+    await rerender();
 
-      expect(mockHandleServiceError).toHaveBeenCalledTimes(1);
-      expect(mockHandleServiceError).toHaveBeenCalledWith('Options');
-      expect(mockedTryGetQuestions).toHaveBeenCalledTimes(1);
-      expect(useQuizStore.getState().firstOption).toBe('');
-      expect(isPending()).toBe(false);
-    },
-  );
+    expect(mockHandleServiceError).toHaveBeenCalledTimes(1);
+    expect(mockHandleServiceError).toHaveBeenCalledWith('Options');
+    expect(mockedTryGetQuestions).toHaveBeenCalledTimes(1);
+    expect(useQuizStore.getState().firstOption).toBe('');
+    expect(isPending()).toBe(false);
+  });
 
   test('shows the result after the last answer', async () => {
     mockedTryGetQuestions.mockResolvedValue(questions);
