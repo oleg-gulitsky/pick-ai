@@ -1,6 +1,11 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
 import { useAppInit } from '../src/hooks/useAppInit';
-import { getRemoteValue, initRemoteConfig } from '../src/services/remoteConfig';
+import { initAds } from '../src/services/ads';
+import {
+  getRemoteBoolean,
+  getRemoteValue,
+  initRemoteConfig,
+} from '../src/services/remoteConfig';
 import {
   detectStructuredOutputSupport,
   setAIModels,
@@ -15,6 +20,7 @@ jest.mock('../src/services/ads', () => ({
 jest.mock('../src/services/remoteConfig', () => ({
   initRemoteConfig: jest.fn(),
   getRemoteValue: jest.fn(),
+  getRemoteBoolean: jest.fn(),
 }));
 jest.mock('../src/services/ai', () => ({
   detectStructuredOutputSupport: jest.fn(),
@@ -24,6 +30,7 @@ jest.mock('../src/services/ai', () => ({
 
 const mockedInitRemoteConfig = jest.mocked(initRemoteConfig);
 const mockedGetRemoteValue = jest.mocked(getRemoteValue);
+const mockedGetRemoteBoolean = jest.mocked(getRemoteBoolean);
 
 const remoteValues: Record<string, string> = {
   ai_models: '["model-a","model-b"]',
@@ -55,6 +62,7 @@ describe('useAppInit', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     useAppConfigStore.setState({ isConfigReady: false });
     mockedGetRemoteValue.mockImplementation(key => remoteValues[key]);
+    mockedGetRemoteBoolean.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -114,6 +122,38 @@ describe('useAppInit', () => {
 
     expect(setAIModels).not.toHaveBeenCalled();
     expect(detectStructuredOutputSupport).not.toHaveBeenCalled();
+    expect(isConfigReady()).toBe(true);
+  });
+
+  test('initializes ads only after Remote Config is applied', async () => {
+    const remoteConfig = deferred();
+    mockedInitRemoteConfig.mockReturnValue(remoteConfig.promise);
+
+    act(() => {
+      renderer = TestRenderer.create(<Probe />);
+    });
+
+    expect(initAds).not.toHaveBeenCalled();
+
+    await act(async () => {
+      remoteConfig.resolve();
+      await flushPromises();
+    });
+
+    expect(mockedGetRemoteBoolean).toHaveBeenCalledWith('ads_enabled');
+    expect(initAds).toHaveBeenCalledTimes(1);
+  });
+
+  test('skips ads initialization when ads are disabled remotely', async () => {
+    mockedInitRemoteConfig.mockResolvedValue();
+    mockedGetRemoteBoolean.mockReturnValue(false);
+
+    await act(async () => {
+      renderer = TestRenderer.create(<Probe />);
+      await flushPromises();
+    });
+
+    expect(initAds).not.toHaveBeenCalled();
     expect(isConfigReady()).toBe(true);
   });
 });

@@ -40,3 +40,7 @@ export async function initRemoteConfig({
 export function getRemoteValue(key: string) {
   return remoteConfig().getValue(key).asString();
 }
+
+export function getRemoteBoolean(key: string) {
+  return remoteConfig().getValue(key).asBoolean();
+}
