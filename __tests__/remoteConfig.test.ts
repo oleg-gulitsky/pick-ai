@@ -1,12 +1,14 @@
-const mockRemoteConfig = {
-  setDefaults: jest.fn(() => Promise.resolve()),
-  setConfigSettings: jest.fn(() => Promise.resolve()),
-  fetchAndActivate: jest.fn(() => Promise.resolve(true)),
-};
+const mockRemoteConfig = {};
+const mockSetDefaults = jest.fn(() => Promise.resolve());
+const mockSetConfigSettings = jest.fn(() => Promise.resolve());
+const mockFetchAndActivate = jest.fn(() => Promise.resolve(true));
 
 jest.mock('@react-native-firebase/remote-config', () => ({
   __esModule: true,
-  default: () => mockRemoteConfig,
+  getRemoteConfig: () => mockRemoteConfig,
+  setDefaults: mockSetDefaults,
+  setConfigSettings: mockSetConfigSettings,
+  fetchAndActivate: mockFetchAndActivate,
 }));
 
 type RemoteConfigModule = typeof import('../src/services/remoteConfig');
@@ -39,7 +41,7 @@ describe('initRemoteConfig', () => {
 
     await initRemoteConfig({ configDefaults: {} });
 
-    expect(mockRemoteConfig.setConfigSettings).toHaveBeenCalledWith({
+    expect(mockSetConfigSettings).toHaveBeenCalledWith(mockRemoteConfig, {
       minimumFetchIntervalMillis: 10 * 60 * 1000,
     });
   });
@@ -49,7 +51,7 @@ describe('initRemoteConfig', () => {
 
     await initRemoteConfig({ configDefaults: {} });
 
-    expect(mockRemoteConfig.setConfigSettings).toHaveBeenCalledWith({
+    expect(mockSetConfigSettings).toHaveBeenCalledWith(mockRemoteConfig, {
       minimumFetchIntervalMillis: 0,
     });
   });
@@ -62,7 +64,7 @@ describe('initRemoteConfig', () => {
       configSettings: { minimumFetchIntervalMillis: 1000 },
     });
 
-    expect(mockRemoteConfig.setConfigSettings).toHaveBeenCalledWith({
+    expect(mockSetConfigSettings).toHaveBeenCalledWith(mockRemoteConfig, {
       minimumFetchIntervalMillis: 1000,
     });
   });

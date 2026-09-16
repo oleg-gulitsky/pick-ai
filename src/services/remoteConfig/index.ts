@@ -1,5 +1,11 @@
-import remoteConfig, {
+import {
+  fetchAndActivate,
   FirebaseRemoteConfigTypes,
+  getBoolean,
+  getRemoteConfig,
+  getString,
+  setConfigSettings,
+  setDefaults,
 } from '@react-native-firebase/remote-config';
 
 const DEV_FETCH_INTERVAL_MS = 0;
@@ -21,14 +27,16 @@ export async function initRemoteConfig({
   configSettings,
 }: initRemoteConfigParams) {
   try {
-    await remoteConfig().setDefaults(configDefaults);
+    const remoteConfig = getRemoteConfig();
 
-    await remoteConfig().setConfigSettings({
+    await setDefaults(remoteConfig, configDefaults);
+
+    await setConfigSettings(remoteConfig, {
       ...DEFAULT_REMOTE_CONFIG_SETTINGS,
       ...configSettings,
     });
 
-    const fetchedRemotely = await remoteConfig().fetchAndActivate();
+    const fetchedRemotely = await fetchAndActivate(remoteConfig);
 
     if (__DEV__) {
       console.log(
@@ -43,9 +51,9 @@ export async function initRemoteConfig({
 }
 
 export function getRemoteValue(key: string) {
-  return remoteConfig().getValue(key).asString();
+  return getString(getRemoteConfig(), key);
 }
 
 export function getRemoteBoolean(key: string) {
-  return remoteConfig().getValue(key).asBoolean();
+  return getBoolean(getRemoteConfig(), key);
 }
