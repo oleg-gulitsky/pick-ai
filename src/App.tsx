@@ -1,8 +1,8 @@
 import { useAppInit } from './hooks/useAppInit';
-import Navigation from './navigation';
+import Navigation, { navigationTheme } from './navigation';
 
 export default function App() {
   useAppInit();
 
-  return <Navigation />;
+  return <Navigation theme={navigationTheme} />;
 }

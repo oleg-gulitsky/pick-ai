@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : ReactActivity() {
 
@@ -27,6 +29,15 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
+    padContentForKeyboard()
+  }
+
+  private fun padContentForKeyboard() {
+      ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { view, insets ->
+          val keyboardHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+          view.setPadding(0, 0, 0, keyboardHeight)
+          insets
+      }
   }
   
   override fun onWindowFocusChanged(hasFocus: Boolean) {

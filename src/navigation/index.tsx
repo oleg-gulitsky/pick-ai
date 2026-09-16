@@ -1,10 +1,12 @@
-import { StyleSheet } from 'react-native';
+import { Keyboard } from 'react-native';
 import {
   createStaticNavigation,
+  DarkTheme,
   StaticParamList,
+  Theme,
   useNavigation,
 } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import {
   createNativeStackNavigator,
   NativeStackNavigationProp,
@@ -17,26 +19,19 @@ import { ResultScreen } from './screens/ResultScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
 import { HistoryDetailsScreen } from './screens/HistoryDetailsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { TabBar } from '../components/TabBar';
 
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: COLORS.LICORICE,
-    borderTopColor: COLORS.DARK_LAVA,
+export const navigationTheme: Theme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: COLORS.DUTCH_WHITE,
+    background: COLORS.LICORICE,
+    card: COLORS.LICORICE,
+    text: COLORS.DUTCH_WHITE,
+    border: COLORS.DARK_LAVA,
   },
-  tabBarItem: {
-    borderRadius: 10,
-    margin: 6,
-    overflow: 'hidden',
-  },
-  tabBarIcon: {
-    display: 'none',
-  },
-  tabBarLabel: {
-    fontSize: 16,
-    marginStart: 0,
-    marginEnd: 0,
-  },
-});
+};
 
 const stackScreenOptions = {
   headerShown: false,
@@ -62,21 +57,13 @@ const HistoryStack = createNativeStackNavigator({
   },
 });
 
-const RootTabs = createBottomTabNavigator({
+const RootTabs = createMaterialTopTabNavigator({
   initialRouteName: 'NewDecisionTab',
-  screenOptions: {
-    headerShown: false,
-    animation: 'fade',
-    tabBarHideOnKeyboard: true,
-    tabBarIcon: () => null,
-    tabBarLabelPosition: 'beside-icon',
-    tabBarStyle: styles.tabBar,
-    tabBarItemStyle: styles.tabBarItem,
-    tabBarIconStyle: styles.tabBarIcon,
-    tabBarLabelStyle: styles.tabBarLabel,
-    tabBarActiveBackgroundColor: COLORS.DARK_LAVA,
-    tabBarActiveTintColor: COLORS.DUTCH_WHITE,
-    tabBarInactiveTintColor: COLORS.WHITE_COFFEE,
+  tabBarPosition: 'bottom',
+  tabBar: props => <TabBar {...props} />,
+  keyboardDismissMode: 'none',
+  screenListeners: {
+    blur: () => Keyboard.dismiss(),
   },
   screens: {
     NewDecisionTab: {

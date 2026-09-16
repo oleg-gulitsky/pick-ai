@@ -48,6 +48,7 @@ function deferred() {
 const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 const isConfigReady = () => useAppConfigStore.getState().isConfigReady;
+const isAdsEnabled = () => useAppConfigStore.getState().isAdsEnabled;
 
 function Probe() {
   useAppInit();
@@ -60,7 +61,7 @@ describe('useAppInit', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    useAppConfigStore.setState({ isConfigReady: false });
+    useAppConfigStore.setState({ isConfigReady: false, isAdsEnabled: false });
     mockedGetRemoteValue.mockImplementation(key => remoteValues[key]);
     mockedGetRemoteBoolean.mockReturnValue(true);
   });
@@ -134,6 +135,7 @@ describe('useAppInit', () => {
     });
 
     expect(initAds).not.toHaveBeenCalled();
+    expect(isAdsEnabled()).toBe(false);
 
     await act(async () => {
       remoteConfig.resolve();
@@ -142,6 +144,7 @@ describe('useAppInit', () => {
 
     expect(mockedGetRemoteBoolean).toHaveBeenCalledWith('ads_enabled');
     expect(initAds).toHaveBeenCalledTimes(1);
+    expect(isAdsEnabled()).toBe(true);
   });
 
   test('skips ads initialization when ads are disabled remotely', async () => {
@@ -154,6 +157,7 @@ describe('useAppInit', () => {
     });
 
     expect(initAds).not.toHaveBeenCalled();
+    expect(isAdsEnabled()).toBe(false);
     expect(isConfigReady()).toBe(true);
   });
 });

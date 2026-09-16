@@ -30,8 +30,6 @@ export function initAds({
   Appodeal.setBannerAnimation(true);
 
   Appodeal.initialize(appodealAppKey, adTypes);
-
-  Appodeal.show(AppodealAdType.BANNER_BOTTOM);
 }
 
 export function tryShowInterstitial(placement?: string): Promise<boolean> {

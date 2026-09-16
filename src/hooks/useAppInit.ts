@@ -19,6 +19,7 @@ import {
 
 export function useAppInit() {
   const setIsConfigReadyTrue = useAppConfigStore.use.setIsConfigReadyTrue();
+  const setIsAdsEnabledTrue = useAppConfigStore.use.setIsAdsEnabledTrue();
 
   useEffect(() => {
     initRemoteConfig({
@@ -41,7 +42,8 @@ export function useAppInit() {
         initAds({
           appodealAppKey: Config.APPODEAL_APP_KEY,
         });
+        setIsAdsEnabledTrue();
       }
     });
-  }, [setIsConfigReadyTrue]);
+  }, [setIsConfigReadyTrue, setIsAdsEnabledTrue]);
 }

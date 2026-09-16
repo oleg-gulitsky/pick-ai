@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
   bottomSection: {
     width: '100%',
     position: 'absolute',
-    bottom: 70,
+    bottom: 20,
   },
   text: {
     color: COLORS.DUTCH_WHITE,
