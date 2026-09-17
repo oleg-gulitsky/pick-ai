@@ -1,4 +1,4 @@
-import { ResponseFormat } from './openRouterService';
+import { ResponseFormat } from '../../../../../services/ai';
 
 export const QUESTIONS_RESPONSE_FORMAT: ResponseFormat = {
   type: 'json_schema',

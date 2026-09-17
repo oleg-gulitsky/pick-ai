@@ -1,31 +1,29 @@
+import { Alert } from 'react-native';
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
 import { Question } from '../src/appTypes/Question';
+import { STRINGS } from '../src/constants/strings';
 import { tryShowInterstitial } from '../src/services/ads';
-import { tryGetQuestions, tryGetResult } from '../src/services/ai';
 import { useQuiz } from '../src/navigation/screens/QuizScreen/useQuiz';
 import { usePendingStore } from '../src/store/usePendingStore';
 import { useQuizStore } from '../src/store/useQuizStore';
 import { useHistoryStore } from '../src/store/useHistoryStore';
 
 const mockNavigation = { replace: jest.fn() };
-const mockHandleServiceError = jest.fn();
+const mockRequestQuestions = jest.fn();
+const mockRequestResult = jest.fn();
 
 jest.mock('../src/navigation', () => ({
   useAppNavigation: () => mockNavigation,
 }));
-jest.mock('../src/hooks/useHandleServiceError', () => ({
-  useHandleServiceError: () => mockHandleServiceError,
-}));
-jest.mock('../src/services/ai', () => ({
-  tryGetQuestions: jest.fn(),
-  tryGetResult: jest.fn(),
+jest.mock('../src/navigation/screens/QuizScreen/useQuiz/useAIRequests', () => ({
+  useAIRequests: () => ({
+    requestQuestions: mockRequestQuestions,
+    requestResult: mockRequestResult,
+  }),
 }));
 jest.mock('../src/services/ads', () => ({
   tryShowInterstitial: jest.fn(),
 }));
-
-const mockedTryGetQuestions = jest.mocked(tryGetQuestions);
-const mockedTryGetResult = jest.mocked(tryGetResult);
 
 const questions: Question[] = [
   { question: 'Hot or cold?', options: ['Hot', 'Cold'] },
@@ -75,6 +73,7 @@ describe('useQuiz', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     useQuizStore.getState().resetQuiz();
     useQuizStore.getState().setOptions('Tea', 'Coffee');
     usePendingStore.getState().setIsPendingFalse();
@@ -84,32 +83,37 @@ describe('useQuiz', () => {
   afterEach(unmount);
 
   test('requests the questions once and shows the first one', async () => {
-    mockedTryGetQuestions.mockResolvedValue(questions);
+    mockRequestQuestions.mockResolvedValue(questions);
 
     await mount();
     await rerender();
 
-    expect(mockedTryGetQuestions).toHaveBeenCalledTimes(1);
+    expect(mockRequestQuestions).toHaveBeenCalledTimes(1);
     expect(api.question).toEqual(questions[0]);
     expect(isPending()).toBe(false);
   });
 
   test('leaves the quiz without retrying when the questions request fails', async () => {
-    mockedTryGetQuestions.mockRejectedValue(new Error());
+    mockRequestQuestions.mockRejectedValue(new Error());
 
     await mount();
     await rerender();
 
-    expect(mockHandleServiceError).toHaveBeenCalledTimes(1);
-    expect(mockHandleServiceError).toHaveBeenCalledWith('Options');
-    expect(mockedTryGetQuestions).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(Alert.alert).toHaveBeenCalledWith(
+      STRINGS.SERVICE_ERROR_ALERT_TITLE,
+      STRINGS.SERVICE_ERROR_ALERT_MESSAGE,
+    );
+    expect(mockNavigation.replace).toHaveBeenCalledTimes(1);
+    expect(mockNavigation.replace).toHaveBeenCalledWith('Options');
+    expect(mockRequestQuestions).toHaveBeenCalledTimes(1);
     expect(useQuizStore.getState().firstOption).toBe('');
     expect(isPending()).toBe(false);
   });
 
   test('shows the result after the last answer', async () => {
-    mockedTryGetQuestions.mockResolvedValue(questions);
-    mockedTryGetResult.mockResolvedValue('Pick tea');
+    mockRequestQuestions.mockResolvedValue(questions);
+    mockRequestResult.mockResolvedValue('Pick tea');
 
     await mount();
     act(() => api.handleOptionPress(0));
@@ -118,7 +122,7 @@ describe('useQuiz', () => {
       await flushPromises();
     });
 
-    expect(mockedTryGetResult).toHaveBeenCalledWith(
+    expect(mockRequestResult).toHaveBeenCalledWith(
       ['Tea', 'Coffee'],
       questions,
       [0, 1],
@@ -139,8 +143,8 @@ describe('useQuiz', () => {
   });
 
   test('sends the result request once when the last answer is tapped twice', async () => {
-    mockedTryGetQuestions.mockResolvedValue(questions);
-    mockedTryGetResult.mockReturnValue(new Promise(() => {}));
+    mockRequestQuestions.mockResolvedValue(questions);
+    mockRequestResult.mockReturnValue(new Promise(() => {}));
 
     await mount();
     act(() => api.handleOptionPress(0));
@@ -152,20 +156,20 @@ describe('useQuiz', () => {
     });
     await rerender();
 
-    expect(mockedTryGetResult).toHaveBeenCalledTimes(1);
+    expect(mockRequestResult).toHaveBeenCalledTimes(1);
     expect(tryShowInterstitial).toHaveBeenCalledTimes(1);
     expect(useQuizStore.getState().answers).toEqual([0, 1]);
   });
 
   test('drops a result that arrives after the screen is gone', async () => {
     const result = deferred<string>();
-    mockedTryGetQuestions.mockResolvedValue(questions);
-    mockedTryGetResult.mockReturnValue(result.promise);
+    mockRequestQuestions.mockResolvedValue(questions);
+    mockRequestResult.mockReturnValue(result.promise);
 
     await mount();
     act(() => api.handleOptionPress(0));
     act(() => api.handleOptionPress(1));
-    const signal = mockedTryGetResult.mock.calls[0][3];
+    const signal = mockRequestResult.mock.calls[0][3];
     unmount();
 
     expect(signal?.aborted).toBe(true);

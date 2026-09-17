@@ -2,7 +2,7 @@ import { MIN_QUESTIONS } from '../src/appTypes/Question';
 import {
   formatQuestionsResponse,
   formatResultResponse,
-} from '../src/services/ai/responseFormatter';
+} from '../src/navigation/screens/QuizScreen/useQuiz/useAIRequests/responseFormatter';
 
 const questions = Array.from({ length: MIN_QUESTIONS }, (_, i) => ({
   question: `Question ${i + 1}?`,

@@ -1,17 +1,18 @@
 import { useCallback, useEffect } from 'react';
-import { useQuizStore } from '../../../store/useQuizStore';
-import { useHistoryStore } from '../../../store/useHistoryStore';
-import { usePendingStore } from '../../../store/usePendingStore';
-import { useAppNavigation } from '../..';
-import { tryShowInterstitial } from '../../../services/ads';
-import { tryGetQuestions, tryGetResult } from '../../../services/ai';
-import { useHandleServiceError } from '../../../hooks/useHandleServiceError';
-import { useScreenRequest } from '../../../hooks/useScreenRequest';
+import { Alert } from 'react-native';
+import { useQuizStore } from '../../../../store/useQuizStore';
+import { useHistoryStore } from '../../../../store/useHistoryStore';
+import { usePendingStore } from '../../../../store/usePendingStore';
+import { useAppNavigation } from '../../..';
+import { tryShowInterstitial } from '../../../../services/ads';
+import { STRINGS } from '../../../../constants/strings';
+import { useAIRequests } from './useAIRequests';
+import { useScreenRequest } from './useScreenRequest';
 
 export function useQuiz() {
   const navigation = useAppNavigation();
-  const handleServiceError = useHandleServiceError();
   const { runRequest, isRequestInFlight } = useScreenRequest();
+  const { requestQuestions, requestResult } = useAIRequests();
   const firstOption = useQuizStore.use.firstOption();
   const secondOption = useQuizStore.use.secondOption();
   const questions = useQuizStore.use.questions();
@@ -25,14 +26,18 @@ export function useQuiz() {
 
   const failQuiz = useCallback(() => {
     resetQuiz();
-    handleServiceError('Options');
-  }, [handleServiceError, resetQuiz]);
+    Alert.alert(
+      STRINGS.SERVICE_ERROR_ALERT_TITLE,
+      STRINGS.SERVICE_ERROR_ALERT_MESSAGE,
+    );
+    navigation.replace('Options');
+  }, [navigation, resetQuiz]);
 
   useEffect(() => {
     if (!firstOption || !secondOption || questions.length > 0) return;
 
     runRequest(
-      signal => tryGetQuestions(firstOption, secondOption, signal),
+      signal => requestQuestions(firstOption, secondOption, signal),
       setQuestions,
       failQuiz,
     );
@@ -40,6 +45,7 @@ export function useQuiz() {
     failQuiz,
     firstOption,
     questions.length,
+    requestQuestions,
     runRequest,
     secondOption,
     setQuestions,
@@ -58,7 +64,7 @@ export function useQuiz() {
     tryShowInterstitial();
     runRequest(
       signal =>
-        tryGetResult([firstOption, secondOption], questions, answers, signal),
+        requestResult([firstOption, secondOption], questions, answers, signal),
       res => {
         setResult(res);
         addHistoryEntry({

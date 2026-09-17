@@ -3,9 +3,7 @@ import {
   MAX_QUESTIONS,
   MIN_OPTIONS,
   Question,
-} from '../../appTypes/Question';
-
-const REQUESTED_MIN_QUESTIONS = 7;
+} from '../../../../../appTypes/Question';
 
 export function buildQuestionsPrompt(first: string, second: string): string {
   return `You are helping someone choose between "${first}" and "${second}".
@@ -51,3 +49,5 @@ YOUR TASK:
 
 Your recommendation:`;
 }
+
+const REQUESTED_MIN_QUESTIONS = 7;

@@ -1,16 +1,12 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
-import { useAppInit } from '../src/hooks/useAppInit';
 import { initAds } from '../src/services/ads';
 import {
   getRemoteBoolean,
   getRemoteValue,
   initRemoteConfig,
 } from '../src/services/remoteConfig';
-import {
-  detectStructuredOutputSupport,
-  setAIModels,
-  setOpenRouterAPIKey,
-} from '../src/services/ai';
+import { fetchIsStructuredOutputsSupported } from '../src/services/ai';
+import { DETECTION_TIMEOUT_MS, useAppInit } from '../src/hooks/useAppInit';
 import { useAppConfigStore } from '../src/store/useAppConfigStore';
 
 jest.mock('react-native-config', () => ({}));
@@ -23,14 +19,15 @@ jest.mock('../src/services/remoteConfig', () => ({
   getRemoteBoolean: jest.fn(),
 }));
 jest.mock('../src/services/ai', () => ({
-  detectStructuredOutputSupport: jest.fn(),
-  setAIModels: jest.fn(),
-  setOpenRouterAPIKey: jest.fn(),
+  fetchIsStructuredOutputsSupported: jest.fn(),
 }));
 
 const mockedInitRemoteConfig = jest.mocked(initRemoteConfig);
 const mockedGetRemoteValue = jest.mocked(getRemoteValue);
 const mockedGetRemoteBoolean = jest.mocked(getRemoteBoolean);
+const mockedFetchIsStructuredOutputsSupported = jest.mocked(
+  fetchIsStructuredOutputsSupported,
+);
 
 const remoteValues: Record<string, string> = {
   ai_models: '["model-a","model-b"]',
@@ -49,6 +46,8 @@ const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 const isConfigReady = () => useAppConfigStore.getState().isConfigReady;
 const isAdsEnabled = () => useAppConfigStore.getState().isAdsEnabled;
+const structuredOutputModels = () =>
+  useAppConfigStore.getState().structuredOutputModels;
 
 function Probe() {
   useAppInit();
@@ -61,7 +60,14 @@ describe('useAppInit', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    useAppConfigStore.setState({ isConfigReady: false, isAdsEnabled: false });
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    useAppConfigStore.setState({
+      isConfigReady: false,
+      isAdsEnabled: false,
+      aiModels: [],
+      openRouterAPIKey: '',
+      structuredOutputModels: [],
+    });
     mockedGetRemoteValue.mockImplementation(key => remoteValues[key]);
     mockedGetRemoteBoolean.mockReturnValue(true);
   });
@@ -69,6 +75,8 @@ describe('useAppInit', () => {
   afterEach(() => {
     act(() => renderer?.unmount());
     renderer = null;
+    jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   test('marks the config ready only after Remote Config is applied', async () => {
@@ -80,22 +88,29 @@ describe('useAppInit', () => {
     });
 
     expect(isConfigReady()).toBe(false);
-    expect(setAIModels).not.toHaveBeenCalled();
+    expect(useAppConfigStore.getState().aiModels).toEqual([]);
 
     await act(async () => {
       remoteConfig.resolve();
       await flushPromises();
     });
 
-    expect(setAIModels).toHaveBeenCalledWith(['model-a', 'model-b']);
-    expect(setOpenRouterAPIKey).toHaveBeenCalledWith('remote-key');
+    expect(useAppConfigStore.getState()).toMatchObject({
+      aiModels: ['model-a', 'model-b'],
+      openRouterAPIKey: 'remote-key',
+    });
     expect(isConfigReady()).toBe(true);
   });
 
   test('checks structured outputs support without blocking the UI', async () => {
-    jest
-      .mocked(detectStructuredOutputSupport)
-      .mockReturnValue(new Promise(() => {}));
+    let resolveChecks!: () => void;
+    const checks = new Promise<void>(resolve => {
+      resolveChecks = resolve;
+    });
+    mockedFetchIsStructuredOutputsSupported.mockImplementation(async model => {
+      await checks;
+      return model === 'model-a';
+    });
     mockedInitRemoteConfig.mockResolvedValue();
 
     await act(async () => {
@@ -103,28 +118,86 @@ describe('useAppInit', () => {
       await flushPromises();
     });
 
-    expect(detectStructuredOutputSupport).toHaveBeenCalledWith([
-      'model-a',
-      'model-b',
-    ]);
     expect(isConfigReady()).toBe(true);
+    expect(structuredOutputModels()).toBeNull();
+
+    await act(async () => {
+      resolveChecks();
+      await flushPromises();
+    });
+
+    expect(structuredOutputModels()).toEqual(['model-a']);
   });
 
-  test('still unlocks the UI when the models value is not valid JSON', async () => {
+  test('treats a failed support check as unsupported', async () => {
+    mockedFetchIsStructuredOutputsSupported.mockImplementation(async model => {
+      if (model === 'model-a') {
+        throw new TypeError('Network request failed');
+      }
+      return true;
+    });
     mockedInitRemoteConfig.mockResolvedValue();
-    mockedGetRemoteValue.mockImplementation(key =>
-      key === 'ai_models' ? 'not json' : remoteValues[key],
+
+    await act(async () => {
+      renderer = TestRenderer.create(<Probe />);
+      await flushPromises();
+    });
+
+    expect(structuredOutputModels()).toEqual(['model-b']);
+  });
+
+  test('treats a hanging support check as unsupported', async () => {
+    jest.useFakeTimers();
+    mockedFetchIsStructuredOutputsSupported.mockImplementation(
+      (model, signal) =>
+        new Promise((resolve, reject) => {
+          if (model === 'model-b') {
+            resolve(true);
+          }
+          signal?.addEventListener('abort', () =>
+            reject(new Error('Request aborted')),
+          );
+        }),
     );
+    mockedInitRemoteConfig.mockResolvedValue();
 
     await act(async () => {
       renderer = TestRenderer.create(<Probe />);
-      await flushPromises();
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(DETECTION_TIMEOUT_MS - 1);
+    });
+    expect(structuredOutputModels()).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
     });
 
-    expect(setAIModels).not.toHaveBeenCalled();
-    expect(detectStructuredOutputSupport).not.toHaveBeenCalled();
-    expect(isConfigReady()).toBe(true);
+    expect(structuredOutputModels()).toEqual(['model-b']);
   });
+
+  test.each([
+    ['not valid JSON', 'not json'],
+    ['not a list of model names', '{"model":"model-a"}'],
+  ])(
+    'still unlocks the UI when the models value is %s',
+    async (_case, modelsValue) => {
+      mockedInitRemoteConfig.mockResolvedValue();
+      mockedGetRemoteValue.mockImplementation(key =>
+        key === 'ai_models' ? modelsValue : remoteValues[key],
+      );
+
+      await act(async () => {
+        renderer = TestRenderer.create(<Probe />);
+        await flushPromises();
+      });
+
+      expect(useAppConfigStore.getState().aiModels).toEqual([]);
+      expect(mockedFetchIsStructuredOutputsSupported).not.toHaveBeenCalled();
+      expect(structuredOutputModels()).toEqual([]);
+      expect(isConfigReady()).toBe(true);
+    },
+  );
 
   test('initializes ads only after Remote Config is applied', async () => {
     const remoteConfig = deferred();

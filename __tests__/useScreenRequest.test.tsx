@@ -1,5 +1,5 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
-import { useScreenRequest } from '../src/hooks/useScreenRequest';
+import { useScreenRequest } from '../src/navigation/screens/QuizScreen/useQuiz/useScreenRequest';
 import { usePendingStore } from '../src/store/usePendingStore';
 
 function deferred<T>() {

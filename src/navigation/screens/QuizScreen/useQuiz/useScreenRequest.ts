@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { usePendingStore } from '../store/usePendingStore';
+import { usePendingStore } from '../../../../store/usePendingStore';
 
 export function useScreenRequest() {
   const setIsPendingTrue = usePendingStore.use.setIsPendingTrue();
