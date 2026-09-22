@@ -1,38 +1,27 @@
 import { ReactNode } from 'react';
-import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import { StyleSheet, View } from 'react-native';
+import { ThemeColors } from '../../constants/colors';
+import { LAYOUT } from '../../constants/layout';
+import { useThemedStyles } from '../../hooks/useAppTheme';
 
 interface ContainerProps {
   children: ReactNode;
-  isPending?: boolean;
 }
 
-export function Container({ children, isPending = false }: ContainerProps) {
-  return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.LICORICE} />
-      {isPending ? (
-        <ActivityIndicator
-          style={styles.activityIndicator}
-          size="large"
-          color={COLORS.DUTCH_WHITE}
-        />
-      ) : (
-        children
-      )}
-    </View>
-  );
+export function Container({ children }: ContainerProps) {
+  const styles = useThemedStyles(createStyles);
+
+  return <View style={styles.container}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.LICORICE,
-    alignItems: 'center',
-  },
-  activityIndicator: {
-    marginTop: '70%',
-  },
-});
+function createStyles(colors: ThemeColors) {
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingTop: LAYOUT.SCREEN_TOP,
+      backgroundColor: colors.bg,
+    },
+  });
+
+  return styles;
+}

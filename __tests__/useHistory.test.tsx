@@ -1,5 +1,4 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
-import { Alert } from 'react-native';
 import { useHistory } from '../src/navigation/screens/HistoryScreen/useHistory';
 import { useHistoryStore } from '../src/store/useHistoryStore';
 
@@ -16,6 +15,15 @@ function Probe() {
   return null;
 }
 
+const addEntry = () =>
+  useHistoryStore.getState().addEntry({
+    options: ['Tea', 'Coffee'],
+    winner: 'Tea',
+    explanation: 'It keeps you calm.',
+    questions: [],
+    answers: [],
+  });
+
 describe('useHistory', () => {
   let renderer: ReactTestRenderer | null = null;
 
@@ -30,20 +38,13 @@ describe('useHistory', () => {
   afterEach(() => {
     act(() => renderer?.unmount());
     renderer = null;
-    jest.restoreAllMocks();
   });
 
   test('shows new decisions as they are saved', () => {
     expect(api.entries).toEqual([]);
 
     act(() => {
-      useHistoryStore.getState().addEntry({
-        firstOption: 'Tea',
-        secondOption: 'Coffee',
-        questions: [],
-        answers: [],
-        result: 'Pick tea',
-      });
+      addEntry();
     });
 
     expect(api.entries).toHaveLength(1);
@@ -58,11 +59,25 @@ describe('useHistory', () => {
   });
 
   test('asks before deleting a long-pressed decision', () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    let id = '';
+    act(() => {
+      id = addEntry();
+    });
 
-    act(() => api.handleEntryLongPress('saved'));
+    act(() => api.handleEntryLongPress(id));
 
-    expect(Alert.alert).toHaveBeenCalledTimes(1);
+    expect(api.isDeleteDialogVisible).toBe(true);
     expect(mockNavigation.navigate).not.toHaveBeenCalled();
+
+    act(() => api.handleDeleteConfirm());
+
+    expect(api.isDeleteDialogVisible).toBe(false);
+    expect(api.entries).toEqual([]);
+  });
+
+  test('starts a decision from the empty state', () => {
+    act(() => api.handleStartDecisionPress());
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('NewDecisionTab');
   });
 });

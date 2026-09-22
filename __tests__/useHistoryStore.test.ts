@@ -7,13 +7,13 @@ const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 const questions = [{ question: 'Hot or cold?', options: ['Hot', 'Cold'] }];
 
-const addEntry = (firstOption = 'Tea', secondOption = 'Coffee') =>
+const addEntry = (options = ['Tea', 'Coffee']) =>
   useHistoryStore.getState().addEntry({
-    firstOption,
-    secondOption,
+    options,
+    winner: options[0],
+    explanation: 'It keeps you calm.',
     questions,
     answers: [1],
-    result: 'Pick tea',
   });
 
 describe('useHistoryStore', () => {
@@ -23,36 +23,42 @@ describe('useHistoryStore', () => {
   });
 
   test('puts the newest decision first', () => {
-    addEntry('Tea', 'Coffee');
-    addEntry('Cats', 'Dogs');
+    addEntry(['Tea', 'Coffee']);
+    addEntry(['Cats', 'Dogs', 'Fish']);
 
     const { entries } = useHistoryStore.getState();
 
-    expect(entries.map(entry => entry.firstOption)).toEqual(['Cats', 'Tea']);
+    expect(entries.map(entry => entry.winner)).toEqual(['Cats', 'Tea']);
     expect(entries[0]).toMatchObject({
-      secondOption: 'Dogs',
+      options: ['Cats', 'Dogs', 'Fish'],
+      explanation: 'It keeps you calm.',
       questions,
       answers: [1],
-      result: 'Pick tea',
       createdAt: expect.any(Number),
     });
     expect(entries[0].id).not.toBe(entries[1].id);
   });
 
+  test('returns the id of the saved decision', () => {
+    const id = addEntry();
+
+    expect(useHistoryStore.getState().entries[0].id).toBe(id);
+  });
+
   test('keeps every decision', () => {
     for (let i = 0; i < 100; i++) {
-      addEntry(`Option ${i}`);
+      addEntry([`Option ${i}`, 'Other']);
     }
 
     const { entries } = useHistoryStore.getState();
 
     expect(entries).toHaveLength(100);
-    expect(entries[99].firstOption).toBe('Option 0');
+    expect(entries[99].winner).toBe('Option 0');
   });
 
   test('removes only the deleted decision', () => {
-    addEntry('Tea', 'Coffee');
-    addEntry('Cats', 'Dogs');
+    addEntry(['Tea', 'Coffee']);
+    addEntry(['Cats', 'Dogs']);
     const [newest, oldest] = useHistoryStore.getState().entries;
 
     useHistoryStore.getState().removeEntry(newest.id);
@@ -61,8 +67,8 @@ describe('useHistoryStore', () => {
   });
 
   test('clears every decision', async () => {
-    addEntry('Tea', 'Coffee');
-    addEntry('Cats', 'Dogs');
+    addEntry(['Tea', 'Coffee']);
+    addEntry(['Cats', 'Dogs']);
 
     useHistoryStore.getState().clearHistory();
     await flushPromises();
@@ -86,21 +92,57 @@ describe('useHistoryStore', () => {
   test('restores the entries saved by a previous launch', async () => {
     const entry: HistoryEntry = {
       id: 'saved',
-      firstOption: 'Tea',
-      secondOption: 'Coffee',
+      options: ['Tea', 'Coffee'],
+      winner: 'Tea',
+      explanation: 'It keeps you calm.',
       questions,
       answers: [0],
-      result: 'Pick tea',
       createdAt: 1,
     };
     await AsyncStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ state: { entries: [entry] }, version: 1 }),
+      JSON.stringify({ state: { entries: [entry] }, version: 2 }),
     );
 
     await useHistoryStore.persist.rehydrate();
 
     expect(useHistoryStore.getState().entries).toEqual([entry]);
     expect(typeof useHistoryStore.getState().addEntry).toBe('function');
+  });
+
+  test('keeps decisions saved before options became a list', async () => {
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          entries: [
+            {
+              id: 'legacy',
+              firstOption: 'Tea',
+              secondOption: 'Coffee',
+              questions,
+              answers: [0],
+              result: 'Pick tea, it keeps you calm.',
+              createdAt: 1,
+            },
+          ],
+        },
+        version: 1,
+      }),
+    );
+
+    await useHistoryStore.persist.rehydrate();
+
+    expect(useHistoryStore.getState().entries).toEqual([
+      {
+        id: 'legacy',
+        options: ['Tea', 'Coffee'],
+        winner: '',
+        explanation: 'Pick tea, it keeps you calm.',
+        questions,
+        answers: [0],
+        createdAt: 1,
+      },
+    ]);
   });
 });

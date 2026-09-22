@@ -1,30 +1,46 @@
-import { useCallback } from 'react';
-import { Alert } from 'react-native';
-import { STRINGS } from '../../../constants/strings';
+import { useCallback, useState } from 'react';
 import { useHistoryStore } from '../../../store/useHistoryStore';
+import { useSettingsStore } from '../../../store/useSettingsStore';
 
 export function useSettings() {
   const historySize = useHistoryStore.use.entries().length;
   const clearHistory = useHistoryStore.use.clearHistory();
+  const theme = useSettingsStore.use.theme();
+  const setTheme = useSettingsStore.use.setTheme();
+  const questionRange = useSettingsStore.use.questionRange();
+  const setQuestionRange = useSettingsStore.use.setQuestionRange();
+  const answerRange = useSettingsStore.use.answerRange();
+  const setAnswerRange = useSettingsStore.use.setAnswerRange();
 
-  const handleClearHistoryPress = useCallback(() => {
-    Alert.alert(
-      STRINGS.CLEAR_HISTORY_ALERT_TITLE,
-      STRINGS.CLEAR_HISTORY_ALERT_MESSAGE,
-      [
-        { text: STRINGS.ALERT_CANCEL_BUTTON_TITLE, style: 'cancel' },
-        {
-          text: STRINGS.CLEAR_HISTORY_ALERT_CONFIRM,
-          style: 'destructive',
-          onPress: () => clearHistory(),
-        },
-      ],
-    );
+  const [isClearDialogVisible, setIsClearDialogVisible] = useState(false);
+
+  const handleClearHistoryPress = useCallback(
+    () => setIsClearDialogVisible(true),
+    [],
+  );
+
+  const handleClearHistoryConfirm = useCallback(() => {
+    setIsClearDialogVisible(false);
+    clearHistory();
   }, [clearHistory]);
+
+  const handleClearHistoryCancel = useCallback(
+    () => setIsClearDialogVisible(false),
+    [],
+  );
 
   return {
     historySize,
     canClearHistory: historySize > 0,
+    theme,
+    questionRange,
+    answerRange,
+    isClearDialogVisible,
+    handleThemeChange: setTheme,
+    handleQuestionRangeChange: setQuestionRange,
+    handleAnswerRangeChange: setAnswerRange,
     handleClearHistoryPress,
+    handleClearHistoryConfirm,
+    handleClearHistoryCancel,
   };
 }

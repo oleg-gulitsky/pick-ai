@@ -6,18 +6,17 @@ export function useScreenRequest() {
   const setIsPendingFalse = usePendingStore.use.setIsPendingFalse();
   const currentRequestRef = useRef<AbortController | null>(null);
 
-  useEffect(
-    () => () => {
-      const controller = currentRequestRef.current;
+  const cancelRequest = useCallback(() => {
+    const controller = currentRequestRef.current;
 
-      if (controller) {
-        currentRequestRef.current = null;
-        controller.abort();
-        setIsPendingFalse();
-      }
-    },
-    [setIsPendingFalse],
-  );
+    if (controller) {
+      currentRequestRef.current = null;
+      controller.abort();
+      setIsPendingFalse();
+    }
+  }, [setIsPendingFalse]);
+
+  useEffect(() => cancelRequest, [cancelRequest]);
 
   const isRequestInFlight = useCallback(
     () => currentRequestRef.current !== null,
@@ -60,5 +59,5 @@ export function useScreenRequest() {
     [setIsPendingFalse, setIsPendingTrue],
   );
 
-  return { runRequest, isRequestInFlight };
+  return { runRequest, isRequestInFlight, cancelRequest };
 }

@@ -2,7 +2,10 @@ import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
 import { Question } from '../src/appTypes/Question';
 import { OpenRouterError, requestCompletion } from '../src/services/ai';
 import { trackEvent } from '../src/services/analytics';
-import { QUESTIONS_RESPONSE_FORMAT } from '../src/navigation/screens/QuizScreen/useQuiz/useAIRequests/schemas';
+import {
+  createResultResponseFormat,
+  QUESTIONS_RESPONSE_FORMAT,
+} from '../src/navigation/screens/QuizScreen/useQuiz/useAIRequests/schemas';
 import {
   REQUEST_TIMEOUT_MS,
   useAIRequests,
@@ -28,6 +31,13 @@ const questions: Question[] = [
   { question: 'Sweet or bitter?', options: ['Sweet', 'Bitter'] },
 ];
 const questionsContent = JSON.stringify({ questions });
+const resultContent = (explanation = 'Tea keeps you calm.') =>
+  JSON.stringify({ winner: 'Tea', explanation });
+const options = ['Tea', 'Coffee'];
+const ranges = {
+  questionRange: [5, 8] as [number, number],
+  answerRange: [3, 4] as [number, number],
+};
 
 function hangUntilAborted({ signal }: CompletionRequest): Promise<never> {
   return new Promise((_resolve, reject) => {
@@ -60,16 +70,17 @@ describe('useAIRequests', () => {
   let renderer: ReactTestRenderer | null = null;
 
   const requestQuestions = (signal = new AbortController().signal) =>
-    api.requestQuestions('Tea', 'Coffee', signal);
+    api.requestQuestions(options, ranges, signal);
 
   const requestResult = (signal = new AbortController().signal) =>
-    api.requestResult(['Tea', 'Coffee'], questions, [0, 1, 1], signal);
+    api.requestResult(options, questions, [0, 1, 1], signal);
 
   beforeEach(() => {
     jest.resetAllMocks();
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
     useAppConfigStore.setState({
+      isConfigReady: true,
       aiModels: ['model'],
       openRouterAPIKey: 'test-key',
       structuredOutputModels: [],
@@ -102,11 +113,14 @@ describe('useAIRequests', () => {
     expect(mockedRequestCompletion).not.toHaveBeenCalled();
   });
 
-  test('sends the result prompt to every model without a schema', async () => {
+  test('sends the result prompt to every model', async () => {
     useAppConfigStore.setState({ aiModels: ['model-a', 'model-b'] });
-    mockedRequestCompletion.mockResolvedValue('  Pick tea  ');
+    mockedRequestCompletion.mockResolvedValue(resultContent());
 
-    await expect(requestResult()).resolves.toBe('Pick tea');
+    await expect(requestResult()).resolves.toEqual({
+      winner: 'Tea',
+      explanation: 'Tea keeps you calm.',
+    });
 
     expect(completionRequests()).toEqual([
       expect.objectContaining({ apiKey: 'test-key', model: 'model-a' }),
@@ -124,10 +138,12 @@ describe('useAIRequests', () => {
       if (model === 'broken') {
         throw new Error('HTTP 429');
       }
-      return 'answer from working';
+      return resultContent('from working');
     });
 
-    await expect(requestResult()).resolves.toBe('answer from working');
+    await expect(requestResult()).resolves.toMatchObject({
+      explanation: 'from working',
+    });
   });
 
   test('moves on to another model when an answer fails validation', async () => {
@@ -156,10 +172,14 @@ describe('useAIRequests', () => {
   test('cancels the remaining requests once one model answers', async () => {
     useAppConfigStore.setState({ aiModels: ['fast', 'slow'] });
     mockedRequestCompletion.mockImplementation(async request =>
-      request.model === 'fast' ? 'fast answer' : hangUntilAborted(request),
+      request.model === 'fast'
+        ? resultContent('fast answer')
+        : hangUntilAborted(request),
     );
 
-    await expect(requestResult()).resolves.toBe('fast answer');
+    await expect(requestResult()).resolves.toMatchObject({
+      explanation: 'fast answer',
+    });
     expect(completionRequests().every(({ signal }) => signal?.aborted)).toBe(
       true,
     );
@@ -168,7 +188,7 @@ describe('useAIRequests', () => {
 
   test('clears the timeout once the request settles', async () => {
     jest.useFakeTimers();
-    mockedRequestCompletion.mockResolvedValue('answer');
+    mockedRequestCompletion.mockResolvedValue(resultContent());
 
     await requestResult();
 
@@ -211,7 +231,7 @@ describe('useAIRequests', () => {
   });
 
   test('rejects when the caller aborts after a response has arrived', async () => {
-    mockedRequestCompletion.mockResolvedValue('late answer');
+    mockedRequestCompletion.mockResolvedValue(resultContent());
     const controller = new AbortController();
 
     const request = requestResult(controller.signal);
@@ -294,10 +314,10 @@ describe('useAIRequests', () => {
           });
         }
         await flushPromises();
-        return 'answer';
+        return resultContent();
       });
 
-      await expect(requestResult()).resolves.toBe('answer');
+      await expect(requestResult()).resolves.toMatchObject({ winner: 'Tea' });
 
       expect(mockedTrackEvent.mock.calls).toEqual([
         [
@@ -364,6 +384,8 @@ describe('useAIRequests', () => {
         responseFormat: QUESTIONS_RESPONSE_FORMAT,
       });
       expect(schemaRequest.content).toContain('"Tea" and "Coffee"');
+      expect(schemaRequest.content).toContain('Create 5 to 8 questions');
+      expect(schemaRequest.content).toContain('3 to 4 answer options');
       expect(plainRequest.model).toBe('plain-model');
       expect(plainRequest.responseFormat).toBeUndefined();
     });
@@ -395,11 +417,80 @@ describe('useAIRequests', () => {
       expect(mockedRequestCompletion).not.toHaveBeenCalled();
     });
 
+    test('lists every option in the prompt', async () => {
+      mockedRequestCompletion.mockResolvedValue(questionsContent);
+
+      await api.requestQuestions(
+        ['Tea', 'Coffee', 'Juice'],
+        ranges,
+        new AbortController().signal,
+      );
+
+      expect(completionRequests()[0].content).toContain(
+        '"Tea", "Coffee" and "Juice"',
+      );
+    });
+  });
+
+  describe('result', () => {
+    test('asks for the schema only from models that support it', async () => {
+      useAppConfigStore.setState({
+        aiModels: ['schema-model', 'plain-model'],
+        structuredOutputModels: ['schema-model'],
+      });
+      mockedRequestCompletion.mockResolvedValue(resultContent());
+
+      await requestResult();
+
+      const [schemaRequest, plainRequest] = completionRequests();
+      expect(schemaRequest.responseFormat).toEqual(
+        createResultResponseFormat(options),
+      );
+      expect(plainRequest.responseFormat).toBeUndefined();
+    });
+
+    test('waits for the config before requesting the result', async () => {
+      useAppConfigStore.setState({ isConfigReady: false });
+      mockedRequestCompletion.mockResolvedValue(resultContent());
+
+      const request = requestResult();
+      await flushPromises();
+      expect(mockedRequestCompletion).not.toHaveBeenCalled();
+
+      useAppConfigStore.getState().setIsConfigReadyTrue();
+
+      await expect(request).resolves.toMatchObject({ winner: 'Tea' });
+    });
+
+    test('stops waiting for the config when the caller aborts', async () => {
+      useAppConfigStore.setState({ isConfigReady: false, aiModels: [] });
+      const controller = new AbortController();
+
+      const request = requestResult(controller.signal);
+      controller.abort();
+
+      await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+      expect(mockedRequestCompletion).not.toHaveBeenCalled();
+      expect(trackedEvents('ai_request_failed')).toEqual([]);
+    });
+
     test('does not wait for the check before requesting the result', async () => {
       useAppConfigStore.setState({ structuredOutputModels: null });
-      mockedRequestCompletion.mockResolvedValue('answer');
+      mockedRequestCompletion.mockResolvedValue(resultContent());
 
-      await expect(requestResult()).resolves.toBe('answer');
+      await expect(requestResult()).resolves.toMatchObject({ winner: 'Tea' });
+      expect(completionRequests()[0].responseFormat).toBeUndefined();
+    });
+
+    test('moves on when the winner is not one of the options', async () => {
+      useAppConfigStore.setState({ aiModels: ['invented', 'valid'] });
+      mockedRequestCompletion.mockImplementation(async ({ model }) =>
+        model === 'invented'
+          ? JSON.stringify({ winner: 'Juice', explanation: 'Fresh.' })
+          : resultContent(),
+      );
+
+      await expect(requestResult()).resolves.toMatchObject({ winner: 'Tea' });
     });
   });
 });

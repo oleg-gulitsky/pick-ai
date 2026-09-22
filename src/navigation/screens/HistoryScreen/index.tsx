@@ -1,20 +1,44 @@
-import { FlatList, StyleSheet, Text } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Container } from '../../../components/basic/Container';
-import { COLORS } from '../../../constants/colors';
+import { Dialog } from '../../../components/basic/Dialog';
+import { ThemeColors } from '../../../constants/colors';
+import { LAYOUT } from '../../../constants/layout';
 import { STRINGS } from '../../../constants/strings';
+import { displayText, monoText } from '../../../constants/typography';
+import { useThemedStyles } from '../../../hooks/useAppTheme';
+import { EmptyHistory } from './EmptyHistory';
 import { HistoryItem } from './HistoryItem';
 import { useHistory } from './useHistory';
 
 export function HistoryScreen() {
-  const { entries, handleEntryPress, handleEntryLongPress } = useHistory();
+  const styles = useThemedStyles(createStyles);
+  const {
+    entries,
+    isDeleteDialogVisible,
+    handleEntryPress,
+    handleEntryLongPress,
+    handleStartDecisionPress,
+    handleDeleteConfirm,
+    handleDeleteCancel,
+  } = useHistory();
 
   return (
     <Container>
-      <Text style={styles.text}>{STRINGS.HISTORY_SCREEN_TITLE}</Text>
       <FlatList
-        style={styles.list}
+        contentContainerStyle={styles.content}
         data={entries}
         keyExtractor={entry => entry.id}
+        ItemSeparatorComponent={Separator}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.title}>{STRINGS.HISTORY_SCREEN_TITLE}</Text>
+            <Text style={styles.count}>
+              {entries.length > 0
+                ? STRINGS.HISTORY_SAVED_COUNT(entries.length)
+                : STRINGS.HISTORY_NOTHING_SAVED}
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <HistoryItem
             entry={item}
@@ -23,24 +47,49 @@ export function HistoryScreen() {
           />
         )}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>{STRINGS.HISTORY_EMPTY}</Text>
+          <EmptyHistory onStartPress={handleStartDecisionPress} />
         }
+      />
+      <Dialog
+        visible={isDeleteDialogVisible}
+        isDestructive={true}
+        title={STRINGS.DELETE_ENTRY_ALERT_TITLE}
+        message={STRINGS.DELETE_ENTRY_ALERT_MESSAGE}
+        confirmTitle={STRINGS.DELETE_ENTRY_ALERT_CONFIRM}
+        cancelTitle={STRINGS.ALERT_CANCEL_BUTTON_TITLE}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
       />
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  list: { width: '100%' },
-  text: {
-    color: COLORS.DUTCH_WHITE,
-    fontSize: 26,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  emptyText: {
-    color: COLORS.WHITE_COFFEE,
-    fontSize: 18,
-    textAlign: 'center',
-  },
-});
+function Separator() {
+  return <View style={SEPARATOR_STYLE} />;
+}
+
+const SEPARATOR_STYLE = { height: 12 };
+
+function createStyles(colors: ThemeColors) {
+  const styles = StyleSheet.create({
+    content: {
+      flexGrow: 1,
+      paddingHorizontal: LAYOUT.SCREEN_SIDE,
+      paddingBottom: LAYOUT.FOOTER_BOTTOM,
+    },
+    header: {
+      marginBottom: 20,
+    },
+    title: {
+      ...displayText(34, 1.05),
+      color: colors.ink,
+      marginBottom: 6,
+    },
+    count: {
+      ...monoText(12),
+      color: colors.label,
+    },
+  });
+
+  return styles;
+}

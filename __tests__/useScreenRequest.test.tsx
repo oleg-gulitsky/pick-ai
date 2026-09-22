@@ -150,4 +150,35 @@ describe('useScreenRequest', () => {
 
     expect(onError).not.toHaveBeenCalled();
   });
+
+  test('cancels a request in flight and lets a new one start', async () => {
+    const response = deferred<string>();
+    let signal!: AbortSignal;
+
+    act(() => {
+      api.runRequest(
+        requestSignal => {
+          signal = requestSignal;
+          return response.promise;
+        },
+        onSuccess,
+        onError,
+      );
+    });
+    act(() => api.cancelRequest());
+
+    expect(signal.aborted).toBe(true);
+    expect(isPending()).toBe(false);
+    expect(api.isRequestInFlight()).toBe(false);
+
+    await act(async () => {
+      response.reject(new Error('AI request was aborted'));
+      await flushPromises();
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(
+      api.runRequest(() => new Promise(() => {}), onSuccess, onError),
+    ).toBe(true);
+  });
 });

@@ -1,8 +1,9 @@
 import { memo } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
-import { useTheme } from '@react-navigation/native';
-import { COLORS } from '../../constants/colors';
+import { ThemeColors } from '../../constants/colors';
+import { FONTS, uiText } from '../../constants/typography';
+import { useThemedStyles } from '../../hooks/useAppTheme';
 
 export type TabRoute = MaterialTopTabBarProps['state']['routes'][number];
 
@@ -25,7 +26,7 @@ function TabBarItemComponent({
   position,
   onPress,
 }: TabBarItemProps) {
-  const { fonts } = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   const highlightOpacity = position.interpolate({
     inputRange: [index - 1, index, index + 1],
@@ -43,33 +44,38 @@ function TabBarItemComponent({
       <Animated.View
         style={[styles.highlight, { opacity: highlightOpacity }]}
       />
-      <Text
-        style={[fonts.medium, styles.label, isFocused && styles.labelFocused]}
-      >
+      <Text style={[styles.label, isFocused && styles.labelFocused]}>
         {label}
       </Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  item: {
-    flex: 1,
-    margin: 6,
-    borderRadius: 10,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  highlight: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.DARK_LAVA,
-  },
-  label: {
-    fontSize: 16,
-    color: COLORS.WHITE_COFFEE,
-  },
-  labelFocused: {
-    color: COLORS.DUTCH_WHITE,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  const styles = StyleSheet.create({
+    item: {
+      flex: 1,
+      height: 40,
+      marginTop: 6,
+      marginHorizontal: 6,
+      borderRadius: 12,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    highlight: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.tabActive,
+    },
+    label: {
+      ...uiText(FONTS.SEMI_BOLD, 14.5),
+      color: colors.tabIdle,
+    },
+    labelFocused: {
+      fontFamily: FONTS.BOLD,
+      color: colors.tabActiveText,
+    },
+  });
+
+  return styles;
+}

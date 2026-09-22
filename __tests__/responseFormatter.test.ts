@@ -104,13 +104,50 @@ describe('formatQuestionsResponse', () => {
 });
 
 describe('formatResultResponse', () => {
-  test('trims surrounding whitespace', () => {
-    expect(formatResultResponse('\n  Pick the first one.  \n')).toBe(
-      'Pick the first one.',
-    );
+  const options = ['Tea', 'Coffee', 'Green tea'];
+
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  test('returns null for a blank answer', () => {
-    expect(formatResultResponse(' \n ')).toBeNull();
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('returns the winner and the trimmed explanation', () => {
+    expect(
+      formatResultResponse(
+        '{"winner":"Coffee","explanation":"  You need energy.  "}',
+        options,
+      ),
+    ).toEqual({ winner: 'Coffee', explanation: 'You need energy.' });
+  });
+
+  test('returns the option as written when the case differs', () => {
+    expect(
+      formatResultResponse(
+        '```json\n{"winner":" green TEA ","explanation":"Calm."}\n```',
+        options,
+      ),
+    ).toEqual({ winner: 'Green tea', explanation: 'Calm.' });
+  });
+
+  test('returns null when the winner is not one of the options', () => {
+    expect(
+      formatResultResponse(
+        '{"winner":"Juice","explanation":"Fresh."}',
+        options,
+      ),
+    ).toBeNull();
+  });
+
+  test('returns null for a blank explanation', () => {
+    expect(
+      formatResultResponse('{"winner":"Tea","explanation":" "}', options),
+    ).toBeNull();
+  });
+
+  test('returns null for a plain-text answer', () => {
+    expect(formatResultResponse('Pick tea', options)).toBeNull();
   });
 });

@@ -1,126 +1,210 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StaticScreenProps } from '@react-navigation/native';
 import { Container } from '../../../components/basic/Container';
-import { BasicButton } from '../../../components/basic/BasicButton';
-import { COLORS } from '../../../constants/colors';
+import { Dialog } from '../../../components/basic/Dialog';
+import { ThemeColors } from '../../../constants/colors';
+import { LAYOUT } from '../../../constants/layout';
 import { STRINGS } from '../../../constants/strings';
+import {
+  displayText,
+  FONTS,
+  monoText,
+  sectionLabelText,
+  uiText,
+} from '../../../constants/typography';
+import { useThemedStyles } from '../../../hooks/useAppTheme';
+import { formatDateTime } from '../../../tools/formatDate';
+import { AnswerChip } from './AnswerChip';
 import { useHistoryDetails } from './useHistoryDetails';
 
 type HistoryDetailsScreenProps = StaticScreenProps<{ id: string }>;
 
 export function HistoryDetailsScreen({ route }: HistoryDetailsScreenProps) {
-  const { entry, answeredQuestions, handleBackPress, handleDeletePress } =
-    useHistoryDetails(route.params.id);
+  const styles = useThemedStyles(createStyles);
+  const {
+    entry,
+    answeredQuestions,
+    isDeleteDialogVisible,
+    handleBackPress,
+    handleDeletePress,
+    handleDeleteConfirm,
+    handleDeleteCancel,
+  } = useHistoryDetails(route.params.id);
 
   return (
     <Container>
-      {entry ? (
-        <ScrollView style={styles.scrollView}>
-          <Text style={styles.title}>
-            {entry.firstOption} vs {entry.secondOption}
-          </Text>
-          <Text style={styles.date}>
-            {new Date(entry.createdAt).toLocaleString()}
-          </Text>
-          <Text style={styles.sectionTitle}>
-            {STRINGS.HISTORY_RECOMMENDATION_TITLE}
-          </Text>
-          <Text style={styles.result}>{entry.result}</Text>
-          <Text style={styles.sectionTitle}>
-            {STRINGS.HISTORY_ANSWERS_TITLE}
-          </Text>
-          {answeredQuestions.map(({ question, options }, questionIndex) => (
-            <View key={questionIndex} style={styles.answerBlock}>
-              <Text style={styles.question}>{question}</Text>
-              {options.map(({ text, isChosen }, optionIndex) => (
-                <Text
-                  key={optionIndex}
-                  style={[styles.option, isChosen && styles.chosenOption]}
-                >
-                  {text}
-                </Text>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
-      <View style={styles.bottomSection}>
-        <BasicButton
-          style={styles.bottomButton}
-          title={STRINGS.BACK_BUTTON_TITLE}
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={STRINGS.BACK_BUTTON_LABEL}
+          style={styles.backButton}
           onPress={handleBackPress}
-        />
+        >
+          <Text style={styles.backArrow}>←</Text>
+        </Pressable>
         {entry ? (
-          <BasicButton
-            style={styles.bottomButton}
-            title={STRINGS.DELETE_BUTTON_TITLE}
-            onPress={handleDeletePress}
-          />
+          <>
+            <Text style={styles.timestamp}>
+              {formatDateTime(entry.createdAt)}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              style={styles.deleteButton}
+              onPress={handleDeletePress}
+            >
+              <Text style={styles.deleteText}>
+                {STRINGS.DELETE_BUTTON_TITLE}
+              </Text>
+            </Pressable>
+          </>
         ) : null}
       </View>
+      {entry ? (
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.title}>
+            {entry.options.map((option, index) => (
+              <Text key={index}>
+                {index > 0 ? (
+                  <Text style={styles.titleSeparator}>
+                    {STRINGS.OPTIONS_SEPARATOR}
+                  </Text>
+                ) : null}
+                {option}
+              </Text>
+            ))}
+          </Text>
+          <View style={styles.resultCard}>
+            <Text style={styles.sectionLabel}>
+              {STRINGS.HISTORY_RECOMMENDATION_TITLE}
+            </Text>
+            {entry.winner ? (
+              <Text style={styles.verdict}>{entry.winner}</Text>
+            ) : null}
+            <Text style={styles.explanation}>{entry.explanation}</Text>
+          </View>
+          <Text style={[styles.sectionLabel, styles.answersLabel]}>
+            {STRINGS.HISTORY_ANSWERS_TITLE}
+          </Text>
+          <View style={styles.questions}>
+            {answeredQuestions.map(({ question, options }, questionIndex) => (
+              <View key={questionIndex}>
+                <Text style={styles.question}>{question}</Text>
+                <View style={styles.chips}>
+                  {options.map(({ text, isChosen }, optionIndex) => (
+                    <AnswerChip
+                      key={optionIndex}
+                      text={text}
+                      isChosen={isChosen}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      ) : null}
+      <Dialog
+        visible={isDeleteDialogVisible}
+        isDestructive={true}
+        title={STRINGS.DELETE_ENTRY_ALERT_TITLE}
+        message={STRINGS.DELETE_ENTRY_ALERT_MESSAGE}
+        confirmTitle={STRINGS.DELETE_ENTRY_ALERT_CONFIRM}
+        cancelTitle={STRINGS.ALERT_CANCEL_BUTTON_TITLE}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
     </Container>
   );
 }
 
-const styles = StyleSheet.create({
-  scrollView: { width: '100%', marginBottom: 140 },
-  bottomSection: {
-    width: '100%',
-    position: 'absolute',
-    bottom: 70,
-    flexDirection: 'row',
-    gap: 20,
-  },
-  bottomButton: {
-    flex: 1,
-    width: 'auto',
-  },
-  title: {
-    color: COLORS.DUTCH_WHITE,
-    fontSize: 26,
-    textAlign: 'center',
-  },
-  date: {
-    color: COLORS.WHITE_COFFEE,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  sectionTitle: {
-    color: COLORS.DUTCH_WHITE,
-    fontSize: 22,
-    marginTop: 30,
-    marginBottom: 10,
-  },
-  result: {
-    color: COLORS.DUTCH_WHITE,
-    fontSize: 18,
-    textAlign: 'justify',
-  },
-  answerBlock: {
-    marginBottom: 20,
-  },
-  question: {
-    color: COLORS.DUTCH_WHITE,
-    fontSize: 18,
-  },
-  option: {
-    color: COLORS.WHITE_COFFEE,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: COLORS.WHITE_COFFEE,
-    borderRadius: 10,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 8,
-    opacity: 0.6,
-  },
-  chosenOption: {
-    color: COLORS.DUTCH_WHITE,
-    backgroundColor: COLORS.DARK_LAVA,
-    borderColor: COLORS.DARK_LAVA,
-    fontWeight: 'bold',
-    opacity: 1,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  const styles = StyleSheet.create({
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: LAYOUT.SCREEN_SIDE,
+      marginBottom: 16,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.borderDashed,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backArrow: {
+      ...uiText(FONTS.REGULAR, 16),
+      color: colors.icon,
+    },
+    timestamp: {
+      ...monoText(11),
+      color: colors.mutedAlt,
+    },
+    deleteButton: {
+      height: 40,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.destructiveBorder,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteText: {
+      ...uiText(FONTS.SEMI_BOLD, 13.5),
+      color: colors.destructive,
+    },
+    content: {
+      paddingHorizontal: LAYOUT.SCREEN_SIDE,
+      paddingBottom: LAYOUT.FOOTER_BOTTOM,
+    },
+    title: {
+      ...displayText(26, 1.14),
+      color: colors.ink,
+      marginBottom: 16,
+    },
+    titleSeparator: {
+      color: colors.mutedAlt,
+    },
+    resultCard: {
+      padding: 18,
+      marginBottom: 22,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    sectionLabel: {
+      ...sectionLabelText(),
+      color: colors.label,
+      marginBottom: 10,
+    },
+    verdict: {
+      ...displayText(28, 1.08),
+      color: colors.ink,
+      marginBottom: 12,
+    },
+    explanation: {
+      ...uiText(FONTS.REGULAR, 15.5, 1.6),
+      color: colors.body,
+    },
+    answersLabel: {
+      marginBottom: 12,
+    },
+    questions: {
+      gap: 18,
+    },
+    question: {
+      ...uiText(FONTS.REGULAR, 15, 1.4),
+      color: colors.body,
+      marginBottom: 9,
+    },
+    chips: {
+      gap: 7,
+    },
+  });
+
+  return styles;
+}

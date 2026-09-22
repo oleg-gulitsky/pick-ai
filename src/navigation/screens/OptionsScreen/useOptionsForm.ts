@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuizStore } from '../../../store/useQuizStore';
 import { usePendingStore } from '../../../store/usePendingStore';
 import { useAppConfigStore } from '../../../store/useAppConfigStore';
@@ -10,20 +10,67 @@ export function useOptionsForm() {
   const isPending = usePendingStore.use.isPending();
   const setIsPendingTrue = usePendingStore.use.setIsPendingTrue();
   const isConfigReady = useAppConfigStore.use.isConfigReady();
-  const setOptions = useQuizStore.use.setOptions();
+  const startQuiz = useQuizStore.use.startQuiz();
 
-  const [firstOption, setFirstOption] = useState('');
-  const [secondOption, setSecondOption] = useState('');
+  const [form, setForm] = useState(createForm);
 
+  const options = useMemo(
+    () =>
+      form.options.map((option, index) => ({
+        ...option,
+        isRemovable: index >= MIN_OPTIONS,
+      })),
+    [form.options],
+  );
+  const trimmedOptions = useMemo(
+    () => form.options.map(option => option.text.trim()),
+    [form.options],
+  );
   const canSubmit =
-    Boolean(firstOption && secondOption) && isConfigReady && !isPending;
+    trimmedOptions.every(option => option.length > 0) &&
+    isConfigReady &&
+    !isPending;
+  const canAddOption = form.options.length < MAX_OPTIONS;
 
-  const handleFirstOptionChange = useCallback(
-    (value: string) => setFirstOption(value),
+  const handleOptionChange = useCallback(
+    (index: number, text: string) =>
+      setForm(current => ({
+        ...current,
+        options: current.options.map((option, optionIndex) =>
+          optionIndex === index
+            ? { ...option, text: text.replace(/\n/g, ' ') }
+            : option,
+        ),
+      })),
     [],
   );
-  const handleSecondOptionChange = useCallback(
-    (value: string) => setSecondOption(value),
+
+  const handleAddOptionPress = useCallback(
+    () =>
+      setForm(current =>
+        current.options.length < MAX_OPTIONS
+          ? {
+              options: [...current.options, { key: current.nextKey, text: '' }],
+              nextKey: current.nextKey + 1,
+              autoFocusKey: current.nextKey,
+            }
+          : current,
+      ),
+    [],
+  );
+
+  const handleRemoveOptionPress = useCallback(
+    (index: number) =>
+      setForm(current =>
+        index >= MIN_OPTIONS
+          ? {
+              ...current,
+              options: current.options.filter(
+                (_option, optionIndex) => optionIndex !== index,
+              ),
+            }
+          : current,
+      ),
     [],
   );
 
@@ -31,24 +78,44 @@ export function useOptionsForm() {
     if (!canSubmit) return;
 
     tryShowInterstitial();
-    setOptions(firstOption, secondOption);
+    startQuiz(trimmedOptions);
     setIsPendingTrue();
     navigation.replace('Quiz');
-  }, [
-    canSubmit,
-    firstOption,
-    navigation,
-    secondOption,
-    setIsPendingTrue,
-    setOptions,
-  ]);
+  }, [canSubmit, navigation, setIsPendingTrue, startQuiz, trimmedOptions]);
 
   return {
-    firstOption,
-    secondOption,
+    options,
+    autoFocusKey: form.autoFocusKey,
     canSubmit,
-    handleFirstOptionChange,
-    handleSecondOptionChange,
+    canAddOption,
+    handleOptionChange,
+    handleAddOptionPress,
+    handleRemoveOptionPress,
     handleSubmit,
+  };
+}
+
+type OptionRow = {
+  key: number;
+  text: string;
+};
+
+type OptionsForm = {
+  options: OptionRow[];
+  nextKey: number;
+  autoFocusKey: number | null;
+};
+
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 4;
+
+function createForm(): OptionsForm {
+  const savedOptions = useQuizStore.getState().options;
+  const texts = savedOptions.length >= MIN_OPTIONS ? savedOptions : ['', ''];
+
+  return {
+    options: texts.map((text, key) => ({ key, text })),
+    nextKey: texts.length,
+    autoFocusKey: null,
   };
 }

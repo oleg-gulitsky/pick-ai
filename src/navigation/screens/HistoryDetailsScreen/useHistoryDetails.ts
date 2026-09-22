@@ -5,7 +5,8 @@ import { useHistoryStore } from '../../../store/useHistoryStore';
 
 export function useHistoryDetails(id: string) {
   const navigation = useAppNavigation();
-  const deleteEntry = useDeleteHistoryEntry();
+  const { isDeleteDialogVisible, requestDelete, confirmDelete, cancelDelete } =
+    useDeleteHistoryEntry();
 
   const [entry] = useState(() =>
     useHistoryStore.getState().entries.find(item => item.id === id),
@@ -24,14 +25,17 @@ export function useHistoryDetails(id: string) {
   const handleBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
   const handleDeletePress = useCallback(
-    () => deleteEntry(id, () => navigation.goBack()),
-    [deleteEntry, id, navigation],
+    () => requestDelete(id, () => navigation.goBack()),
+    [id, navigation, requestDelete],
   );
 
   return {
     entry,
     answeredQuestions,
+    isDeleteDialogVisible,
     handleBackPress,
     handleDeletePress,
+    handleDeleteConfirm: confirmDelete,
+    handleDeleteCancel: cancelDelete,
   };
 }

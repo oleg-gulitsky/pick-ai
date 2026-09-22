@@ -2,6 +2,7 @@ import { Keyboard } from 'react-native';
 import {
   createStaticNavigation,
   DarkTheme,
+  DefaultTheme,
   StaticParamList,
   Theme,
   useNavigation,
@@ -11,7 +12,7 @@ import {
   createNativeStackNavigator,
   NativeStackNavigationProp,
 } from '@react-navigation/native-stack';
-import { COLORS } from '../constants/colors';
+import { COLORS, ColorScheme } from '../constants/colors';
 import { STRINGS } from '../constants/strings';
 import { OptionsScreen } from './screens/OptionsScreen';
 import { QuizScreen } from './screens/QuizScreen';
@@ -21,17 +22,9 @@ import { HistoryDetailsScreen } from './screens/HistoryDetailsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { TabBar } from '../components/TabBar';
 
-export const navigationTheme: Theme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: COLORS.DUTCH_WHITE,
-    background: COLORS.LICORICE,
-    card: COLORS.LICORICE,
-    text: COLORS.DUTCH_WHITE,
-    border: COLORS.DARK_LAVA,
-  },
-};
+export function getNavigationTheme(scheme: ColorScheme): Theme {
+  return NAVIGATION_THEMES[scheme];
+}
 
 const stackScreenOptions = {
   headerShown: false,
@@ -103,4 +96,26 @@ export type ScreenName = {
 
 export function useAppNavigation() {
   return useNavigation<NativeStackNavigationProp<AppParamList>>();
+}
+
+const NAVIGATION_THEMES: Record<ColorScheme, Theme> = {
+  light: createNavigationTheme(DefaultTheme, 'light'),
+  dark: createNavigationTheme(DarkTheme, 'dark'),
+};
+
+function createNavigationTheme(base: Theme, scheme: ColorScheme): Theme {
+  const colors = COLORS[scheme];
+
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.accent,
+      background: colors.bg,
+      card: colors.bg,
+      text: colors.ink,
+      border: colors.border,
+      notification: colors.destructive,
+    },
+  };
 }

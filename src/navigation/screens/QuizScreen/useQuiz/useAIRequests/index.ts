@@ -8,22 +8,29 @@ import {
 import { trackEvent } from '../../../../../services/analytics';
 import { useAppConfigStore } from '../../../../../store/useAppConfigStore';
 import { ANALYTICS_EVENTS } from './analyticsEvents';
-import { buildQuestionsPrompt, buildResultPrompt } from './prompts';
+import { buildQuestionsPrompt, buildResultPrompt, QuizRanges } from './prompts';
 import {
   formatQuestionsResponse,
   formatResultResponse,
 } from './responseFormatter';
-import { QUESTIONS_RESPONSE_FORMAT } from './schemas';
+import {
+  createResultResponseFormat,
+  QUESTIONS_RESPONSE_FORMAT,
+} from './schemas';
 
 export const REQUEST_TIMEOUT_MS = 60_000;
 
 export function useAIRequests() {
   const requestQuestions = useCallback(
-    async (first: string, second: string, signal: AbortSignal) => {
-      await waitForStructuredOutputsCheck(signal);
+    async (options: string[], ranges: QuizRanges, signal: AbortSignal) => {
+      await waitForAppConfig(
+        config =>
+          config.isConfigReady && config.structuredOutputModels !== null,
+        signal,
+      );
       const structuredOutputModels =
         useAppConfigStore.getState().structuredOutputModels ?? [];
-      const content = buildQuestionsPrompt(first, second);
+      const content = buildQuestionsPrompt(options, ranges);
 
       return requestFromModels(
         model => ({
@@ -40,17 +47,28 @@ export function useAIRequests() {
   );
 
   const requestResult = useCallback(
-    (
+    async (
       options: string[],
       questions: Question[],
       answers: number[],
       signal: AbortSignal,
     ) => {
+      if (!useAppConfigStore.getState().isConfigReady) {
+        await waitForAppConfig(config => config.isConfigReady, signal);
+      }
+      const structuredOutputModels =
+        useAppConfigStore.getState().structuredOutputModels ?? [];
       const content = buildResultPrompt(options, questions, answers);
+      const responseFormat = createResultResponseFormat(options);
 
       return requestFromModels(
-        () => ({ content }),
-        formatResultResponse,
+        model => ({
+          content,
+          responseFormat: structuredOutputModels.includes(model)
+            ? responseFormat
+            : undefined,
+        }),
+        response => formatResultResponse(response, options),
         signal,
       );
     },
@@ -64,6 +82,8 @@ type Prompt = {
   content: string;
   responseFormat?: ResponseFormat;
 };
+
+type AppConfig = ReturnType<typeof useAppConfigStore.getState>;
 
 type RequestFailureReason =
   | 'no_models'
@@ -112,26 +132,33 @@ function trackRequestFailure(reason: RequestFailureReason) {
   });
 }
 
-function waitForStructuredOutputsCheck(signal: AbortSignal): Promise<void> {
-  const isChecked = () =>
-    useAppConfigStore.getState().structuredOutputModels !== null;
+function waitForAppConfig(
+  isReady: (config: AppConfig) => boolean,
+  signal: AbortSignal,
+): Promise<void> {
+  const isConfigReady = () => isReady(useAppConfigStore.getState());
 
-  if (signal.aborted || isChecked()) {
+  if (signal.aborted) {
+    return Promise.reject(createAbortError());
+  }
+
+  if (isConfigReady()) {
     return Promise.resolve();
   }
 
-  return new Promise(resolve => {
-    const finish = () => {
+  return new Promise((resolve, reject) => {
+    const settle = (finish: () => void) => {
       unsubscribe();
-      signal.removeEventListener('abort', finish);
-      resolve();
+      signal.removeEventListener('abort', handleAbort);
+      finish();
     };
+    const handleAbort = () => settle(() => reject(createAbortError()));
     const unsubscribe = useAppConfigStore.subscribe(() => {
-      if (isChecked()) {
-        finish();
+      if (isConfigReady()) {
+        settle(resolve);
       }
     });
-    signal.addEventListener('abort', finish);
+    signal.addEventListener('abort', handleAbort);
   });
 }
 

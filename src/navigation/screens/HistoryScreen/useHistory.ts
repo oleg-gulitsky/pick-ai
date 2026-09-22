@@ -5,7 +5,8 @@ import { useHistoryStore } from '../../../store/useHistoryStore';
 
 export function useHistory() {
   const navigation = useAppNavigation();
-  const deleteEntry = useDeleteHistoryEntry();
+  const { isDeleteDialogVisible, requestDelete, confirmDelete, cancelDelete } =
+    useDeleteHistoryEntry();
   const entries = useHistoryStore.use.entries();
 
   const handleEntryPress = useCallback(
@@ -14,13 +15,22 @@ export function useHistory() {
   );
 
   const handleEntryLongPress = useCallback(
-    (id: string) => deleteEntry(id),
-    [deleteEntry],
+    (id: string) => requestDelete(id),
+    [requestDelete],
+  );
+
+  const handleStartDecisionPress = useCallback(
+    () => navigation.navigate('NewDecisionTab'),
+    [navigation],
   );
 
   return {
     entries,
+    isDeleteDialogVisible,
     handleEntryPress,
     handleEntryLongPress,
+    handleStartDecisionPress,
+    handleDeleteConfirm: confirmDelete,
+    handleDeleteCancel: cancelDelete,
   };
 }

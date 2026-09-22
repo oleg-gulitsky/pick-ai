@@ -26,3 +26,22 @@ export const QUESTIONS_RESPONSE_FORMAT: ResponseFormat = {
     },
   },
 };
+
+export function createResultResponseFormat(options: string[]): ResponseFormat {
+  return {
+    type: 'json_schema',
+    json_schema: {
+      name: 'result',
+      strict: true,
+      schema: {
+        type: 'object',
+        properties: {
+          winner: { type: 'string', enum: options },
+          explanation: { type: 'string' },
+        },
+        required: ['winner', 'explanation'],
+        additionalProperties: false,
+      },
+    },
+  };
+}

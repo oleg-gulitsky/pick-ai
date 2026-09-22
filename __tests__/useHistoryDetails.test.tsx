@@ -1,5 +1,4 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
-import { Alert } from 'react-native';
 import { useHistoryDetails } from '../src/navigation/screens/HistoryDetailsScreen/useHistoryDetails';
 import { HistoryEntry, useHistoryStore } from '../src/store/useHistoryStore';
 
@@ -11,14 +10,14 @@ jest.mock('../src/navigation', () => ({
 
 const entry: HistoryEntry = {
   id: 'saved',
-  firstOption: 'Tea',
-  secondOption: 'Coffee',
+  options: ['Tea', 'Coffee'],
+  winner: 'Tea',
+  explanation: 'It keeps you calm.',
   questions: [
     { question: 'Hot or cold?', options: ['Hot', 'Cold'] },
     { question: 'Morning or evening?', options: ['Morning', 'Evening'] },
   ],
   answers: [1, 0],
-  result: 'Pick tea',
   createdAt: 1,
 };
 
@@ -40,14 +39,12 @@ describe('useHistoryDetails', () => {
 
   beforeEach(() => {
     mockNavigation.goBack.mockClear();
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     useHistoryStore.setState({ entries: [entry] });
   });
 
   afterEach(() => {
     act(() => renderer?.unmount());
     renderer = null;
-    jest.restoreAllMocks();
   });
 
   test('shows every option and marks the chosen one', () => {
@@ -92,16 +89,25 @@ describe('useHistoryDetails', () => {
 
     act(() => api.handleDeletePress());
 
+    expect(api.isDeleteDialogVisible).toBe(true);
     expect(mockNavigation.goBack).not.toHaveBeenCalled();
 
-    const buttons = jest.mocked(Alert.alert).mock.calls[0][2] ?? [];
-    act(() => {
-      buttons.find(button => button.style === 'destructive')?.onPress?.();
-    });
+    act(() => api.handleDeleteConfirm());
 
     expect(mockNavigation.goBack).toHaveBeenCalledTimes(1);
     expect(useHistoryStore.getState().entries).toEqual([]);
     // The closing screen keeps its content instead of going blank.
     expect(api.entry).toBe(entry);
+  });
+
+  test('keeps the decision when the deletion is cancelled', () => {
+    mount('saved');
+
+    act(() => api.handleDeletePress());
+    act(() => api.handleDeleteCancel());
+
+    expect(api.isDeleteDialogVisible).toBe(false);
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+    expect(useHistoryStore.getState().entries).toEqual([entry]);
   });
 });

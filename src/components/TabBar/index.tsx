@@ -2,9 +2,11 @@ import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AppodealBanner } from 'react-native-appodeal';
 import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
-import { COLORS } from '../../constants/colors';
+import { ThemeColors } from '../../constants/colors';
+import { useThemedStyles } from '../../hooks/useAppTheme';
 import { useAppConfigStore } from '../../store/useAppConfigStore';
 import { TabBarItem, TabRoute } from './TabBarItem';
+import { useKeyboardVisible } from './useKeyboardVisible';
 
 export function TabBar({
   state,
@@ -12,7 +14,9 @@ export function TabBar({
   navigation,
   position,
 }: MaterialTopTabBarProps) {
+  const styles = useThemedStyles(createStyles);
   const isAdsEnabled = useAppConfigStore.use.isAdsEnabled();
+  const isKeyboardVisible = useKeyboardVisible();
 
   const focusedRouteKey = state.routes[state.index].key;
 
@@ -33,7 +37,12 @@ export function TabBar({
 
   return (
     <>
-      <View style={styles.tabBar}>
+      <View
+        style={[
+          styles.tabBar,
+          !isAdsEnabled && !isKeyboardVisible && styles.tabBarNoBanner,
+        ]}
+      >
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
 
@@ -50,20 +59,40 @@ export function TabBar({
           );
         })}
       </View>
-      {isAdsEnabled && <AppodealBanner style={styles.banner} />}
+      {isAdsEnabled && (
+        <View style={styles.bannerSlot}>
+          <AppodealBanner style={styles.banner} />
+        </View>
+      )}
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    flexDirection: 'row',
-    height: 49,
-    backgroundColor: COLORS.LICORICE,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.DARK_LAVA,
-  },
-  banner: {
-    backgroundColor: COLORS.LICORICE,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  const styles = StyleSheet.create({
+    tabBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      height: 52,
+      backgroundColor: colors.tabBg,
+      borderTopWidth: 1,
+      borderTopColor: colors.tabBorder,
+    },
+    tabBarNoBanner: {
+      height: 102,
+      paddingTop: 8,
+    },
+    bannerSlot: {
+      height: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.bannerBg,
+    },
+    banner: {
+      width: 320,
+      height: 50,
+    },
+  });
+
+  return styles;
+}

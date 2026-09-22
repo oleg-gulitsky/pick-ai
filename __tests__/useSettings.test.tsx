@@ -1,24 +1,17 @@
 import TestRenderer, { act, ReactTestRenderer } from 'react-test-renderer';
-import { Alert, AlertButton } from 'react-native';
 import { useSettings } from '../src/navigation/screens/SettingsScreen/useSettings';
 import { HistoryEntry, useHistoryStore } from '../src/store/useHistoryStore';
+import { useSettingsStore } from '../src/store/useSettingsStore';
 
 const createEntry = (id: string): HistoryEntry => ({
   id,
-  firstOption: 'Tea',
-  secondOption: 'Coffee',
+  options: ['Tea', 'Coffee'],
+  winner: 'Tea',
+  explanation: 'It keeps you calm.',
   questions: [],
   answers: [],
-  result: 'Pick tea',
   createdAt: 1,
 });
-
-function pressAlertButton(style: AlertButton['style']) {
-  const buttons = jest.mocked(Alert.alert).mock.calls[0][2] ?? [];
-  act(() => {
-    buttons.find(button => button.style === style)?.onPress?.();
-  });
-}
 
 let api: ReturnType<typeof useSettings>;
 
@@ -31,9 +24,13 @@ describe('useSettings', () => {
   let renderer: ReactTestRenderer | null = null;
 
   beforeEach(() => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     useHistoryStore.setState({
       entries: [createEntry('first'), createEntry('second')],
+    });
+    useSettingsStore.setState({
+      theme: 'system',
+      questionRange: [7, 10],
+      answerRange: [2, 4],
     });
     act(() => {
       renderer = TestRenderer.create(<Probe />);
@@ -43,7 +40,6 @@ describe('useSettings', () => {
   afterEach(() => {
     act(() => renderer?.unmount());
     renderer = null;
-    jest.restoreAllMocks();
   });
 
   test('shows how many decisions are saved', () => {
@@ -54,10 +50,12 @@ describe('useSettings', () => {
   test('clears the history once confirmed', () => {
     act(() => api.handleClearHistoryPress());
 
+    expect(api.isClearDialogVisible).toBe(true);
     expect(useHistoryStore.getState().entries).toHaveLength(2);
 
-    pressAlertButton('destructive');
+    act(() => api.handleClearHistoryConfirm());
 
+    expect(api.isClearDialogVisible).toBe(false);
     expect(useHistoryStore.getState().entries).toEqual([]);
     expect(api.historySize).toBe(0);
     expect(api.canClearHistory).toBe(false);
@@ -65,8 +63,26 @@ describe('useSettings', () => {
 
   test('keeps the history when cancelled', () => {
     act(() => api.handleClearHistoryPress());
-    pressAlertButton('cancel');
+    act(() => api.handleClearHistoryCancel());
 
+    expect(api.isClearDialogVisible).toBe(false);
     expect(useHistoryStore.getState().entries).toHaveLength(2);
+  });
+
+  test('saves the theme and both ranges', () => {
+    act(() => {
+      api.handleThemeChange('dark');
+      api.handleQuestionRangeChange([5, 8]);
+      api.handleAnswerRangeChange([3, 3]);
+    });
+
+    expect(api.theme).toBe('dark');
+    expect(api.questionRange).toEqual([5, 8]);
+    expect(api.answerRange).toEqual([3, 3]);
+    expect(useSettingsStore.getState()).toMatchObject({
+      theme: 'dark',
+      questionRange: [5, 8],
+      answerRange: [3, 3],
+    });
   });
 });

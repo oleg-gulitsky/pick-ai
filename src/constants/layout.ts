@@ -1,0 +1,5 @@
+export const LAYOUT = {
+  SCREEN_TOP: 50,
+  SCREEN_SIDE: 22,
+  FOOTER_BOTTOM: 20,
+};
