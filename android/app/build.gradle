@@ -112,16 +112,20 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation ('com.appodeal.ads:sdk:3.10.0.0') {
-        exclude group: 'com.appodeal.ads.sdk.services', module: 'adjust'
-        exclude group: 'com.appodeal.ads.sdk.services', module: 'appsflyer'
-        exclude group: 'com.appodeal.ads.sdk.services', module: 'firebase'
-        exclude group: 'com.appodeal.ads.sdk.services', module: 'facebook_analytics'
-    }
-    implementation('com.my.target:mytarget-sdk:5.27.1') {
-        exclude group: 'com.android.billingclient', module: 'billing'
-    }
-    implementation("com.android.billingclient:billing:7.0.0")
+
+    implementation("com.appodeal.ads.sdk:core:4.3.0")
+
+    implementation("com.applovin.mediation:vungle-adapter:7.7.4.0")
+
+    implementation("org.bidon:applovin-adapter:13.6.3.0")
+    implementation("org.bidon:vungle-adapter:7.7.4.0")
+
+    implementation("com.appodeal.ads.sdk.adapters:applovin:13.6.3.0")
+    implementation("com.appodeal.ads.sdk.adapters:applovin_max:13.6.3.1")
+    implementation("com.appodeal.ads.sdk.adapters:bidon:0.14.0.0")
+    implementation("com.appodeal.ads.sdk.adapters:iab:1.8.1.0")
+    implementation("com.appodeal.ads.sdk.adapters:vungle:7.7.4.0")
+
     implementation platform("com.google.firebase:firebase-bom:33.16.0")
     implementation("com.google.firebase:firebase-analytics")
     if (hermesEnabled.toBoolean()) {
