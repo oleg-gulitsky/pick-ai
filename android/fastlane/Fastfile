@@ -15,14 +15,6 @@ platform :android do
     }
   )
 
-  firebase_app_distribution(
-    app: ENV['FIREBASE_ANDROID_APP_ID'],
-    firebase_cli_token: ENV['FIREBASE_TOKEN'],
-    groups: 'testers',
-    android_artifact_type: "AAB",
-    android_artifact_path: File.absolute_path('../app/build/outputs/bundle/release/app-release.aab'),
-  )
-  
   upload_to_play_store(
     track: 'internal',
     release_status: 'completed',
